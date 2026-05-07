@@ -1,0 +1,3106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#0f1117"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="description" content="NutriLog – personal macro & diet tracker"/>
+<meta name="app-version" content="2026-04-29-11"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
+<link rel="icon" type="image/png" href="icons/icon-192.png"/>
+<title>NutriLog</title>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet"/>
+
+<!-- Firebase compat CDN -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<!-- Chart.js for trend visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+:root {
+  --bg:        #0f1117;
+  --surface:   #181c24;
+  --surface2:  #1e2330;
+  --border:    #2a3044;
+  --accent:    #c8f06e;
+  --accent2:   #5cb8b2;
+  --warn:      #f0a05a;
+  --danger:    #e05c5c;
+  --text:      #eef0f5;
+  --muted:     #7a8399;
+  --protein:   #5cb8b2;
+  --carbs:     #f0a05a;
+  --fat:       #e05c5c;
+  --calories:  #c8f06e;
+  --radius:    14px;
+  --radius-sm: 8px;
+  --font-head: 'DM Serif Display', serif;
+  --font-body: 'DM Sans', sans-serif;
+  --transition: 0.22s cubic-bezier(.4,0,.2,1);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100%; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+h1,h2,h3 { font-family: var(--font-head); letter-spacing: -0.02em; }
+h1 { font-size: clamp(2rem,5vw,3rem); line-height: 1.1; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.1rem; }
+.page { display: none; min-height: 100dvh; flex-direction: column; }
+.page.active { display: flex; animation: fadeUp .35s var(--transition) both; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+input, select, textarea { width: 100%; background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-body); font-size: .95rem; padding: .7rem 1rem; transition: border-color var(--transition), box-shadow var(--transition); outline: none; appearance: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,240,110,.12); }
+input::placeholder { color: var(--muted); }
+select option { background: var(--surface2); }
+label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; display: block; margin-bottom: .35rem; }
+.field { margin-bottom: 1rem; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border: none; border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-body); font-weight: 600; font-size: .9rem; padding: .75rem 1.4rem; transition: all var(--transition); outline: none; user-select: none; white-space: nowrap; }
+.btn-primary { background: var(--accent); color: #0f1117; }
+.btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(200,240,110,.25); }
+.btn-secondary { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-ghost { background: transparent; color: var(--muted); }
+.btn-ghost:hover { color: var(--text); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-sm { padding: .4rem .9rem; font-size: .8rem; }
+.btn-full { width: 100%; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; }
+.macro-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; }
+.macro-pill { background: var(--surface2); border-radius: var(--radius-sm); padding: .6rem .5rem; text-align: center; border: 1px solid var(--border); }
+.macro-pill .val { font-family: var(--font-head); font-size: 1.2rem; display: block; }
+.macro-pill .lbl { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.macro-pill.p .val { color: var(--protein); }
+.macro-pill.c .val { color: var(--carbs); }
+.macro-pill.f .val { color: var(--fat); }
+.macro-pill.k .val { color: var(--calories); }
+.progress-bar { height: 6px; background: var(--surface2); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 999px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+#main-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(24,28,36,.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: none; grid-template-columns: repeat(5,1fr); z-index: 100; padding-bottom: env(safe-area-inset-bottom, 0); }
+#main-nav.visible { display: grid; }
+.nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: .7rem .5rem; background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: .65rem; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; transition: color var(--transition); }
+.nav-btn svg { width: 20px; height: 20px; }
+.nav-btn.active { color: var(--accent); }
+.has-nav { padding-bottom: calc(90px + env(safe-area-inset-bottom, 0)); }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 1.2rem .6rem; }
+.topbar-title { font-family: var(--font-head); font-size: 1.3rem; }
+#toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .7rem 1.2rem; font-size: .85rem; opacity: 0; transition: all .3s ease; z-index: 999; white-space: nowrap; pointer-events: none; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 200; align-items: flex-end; padding: 0; }
+.modal-overlay.open { display: flex; }
+.modal-sheet { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 1.5rem 1.2rem; width: 100%; max-height: 85dvh; overflow-y: auto; animation: slideUp .3s ease both; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.search-wrap { position: relative; }
+.search-wrap svg { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+.search-wrap input { padding-left: 2.4rem; }
+.food-list { margin-top: .8rem; display: flex; flex-direction: column; gap: .4rem; max-height: 260px; overflow-y: auto; }
+.food-item { display: flex; align-items: center; justify-content: space-between; padding: .65rem .8rem; background: var(--surface2); border-radius: var(--radius-sm); border: 1px solid transparent; cursor: pointer; transition: all var(--transition); }
+.food-item:hover { border-color: var(--accent); transform: translateX(2px); }
+.food-item:active { transform: scale(.98); }
+.food-item .fi-name { font-size: .9rem; font-weight: 500; }
+.food-item .fi-meta { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
+.food-item .fi-cal { font-size: .8rem; color: var(--accent); font-weight: 600; flex-shrink: 0; margin-left: .8rem; }
+.food-item .fi-add { color: var(--accent); font-size: 1.1rem; margin-left: .5rem; flex-shrink: 0; }
+.food-item.web-source { border-left: 2px solid #6a9fb5; }
+.food-item.web-source .fi-name::after { content: ' · web'; color: #6a9fb5; font-size: .68rem; font-weight: 400; }
+.food-empty { text-align: center; padding: 1rem; color: var(--muted); font-size: .82rem; font-style: italic; }
+.web-loading { text-align: center; padding: 1rem; color: var(--muted); font-size: .85rem; }
+.selected-row { display: flex; align-items: center; justify-content: space-between; padding: .55rem .65rem; background: var(--surface2); border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: .35rem; gap: .4rem; }
+.selected-row .sr-name { flex: 1; font-size: .88rem; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selected-row .sr-name .sr-serving { font-size: .68rem; color: var(--muted); display: block; font-weight: 400; }
+.selected-row .sr-qty { width: 60px; padding: .35rem .4rem; font-size: .85rem; text-align: center; }
+.selected-row .sr-cal { font-size: .78rem; color: var(--accent); font-weight: 600; flex-shrink: 0; min-width: 60px; text-align: right; }
+.selected-row .sr-del { padding: .3rem .5rem; font-size: 1rem; line-height: 1; flex-shrink: 0; }
+.meal-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: .8rem; }
+.meal-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
+.meal-card-title { font-size: 1rem; font-weight: 600; }
+.meal-item-row { display: flex; align-items: center; justify-content: space-between; padding: .4rem 0; border-bottom: 1px solid var(--border); font-size: .85rem; }
+.meal-item-row:last-child { border-bottom: none; }
+.bmi-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+.bmi-ring { position: relative; width: 110px; height: 110px; }
+.bmi-ring svg { transform: rotate(-90deg); }
+.bmi-ring-val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.bmi-ring-val .num { font-family: var(--font-head); font-size: 1.5rem; }
+.bmi-ring-val .lbl { font-size: .62rem; color: var(--muted); text-transform: uppercase; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.stat-block { background: var(--surface2); border-radius: var(--radius-sm); padding: .9rem .8rem; border: 1px solid var(--border); }
+.stat-block .sv { font-family: var(--font-head); font-size: 1.3rem; }
+.stat-block .sl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: .15rem; }
+#page-onboard { padding: 2rem 1.4rem; justify-content: center; }
+.onboard-logo { font-family: var(--font-head); font-size: 2.4rem; color: var(--accent); margin-bottom: .2rem; }
+.onboard-sub { color: var(--muted); font-size: .95rem; margin-bottom: 2.5rem; }
+.step { display: none; }
+.step.active { display: block; animation: fadeUp .3s ease both; }
+.step-indicator { display: flex; gap: .4rem; margin-bottom: 2rem; }
+.step-dot { height: 4px; border-radius: 2px; flex: 1; background: var(--border); transition: background var(--transition); }
+.step-dot.done { background: var(--accent); }
+#page-auth { min-height: 100dvh; align-items: center; justify-content: center; padding: 2rem 1.4rem; }
+.auth-card { width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; }
+.auth-logo { font-family: var(--font-head); font-size: 2rem; color: var(--accent); margin-bottom: 1.5rem; text-align: center; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; background: var(--surface2); border-radius: var(--radius-sm); padding: .3rem; margin-bottom: 1.5rem; }
+.auth-tab { padding: .55rem; text-align: center; border-radius: 6px; cursor: pointer; font-size: .85rem; font-weight: 500; transition: all var(--transition); color: var(--muted); }
+.auth-tab.active { background: var(--surface); color: var(--text); }
+#page-home { padding-top: 0; }
+.home-header { background: linear-gradient(160deg, #1a2535 0%, var(--bg) 100%); padding: 1.5rem 1.2rem 1.2rem; border-bottom: 1px solid var(--border); }
+.home-greeting { color: var(--muted); font-size: .85rem; margin-bottom: .2rem; }
+.home-name { font-family: var(--font-head); font-size: 1.6rem; color: var(--text); }
+.home-date { color: var(--muted); font-size: .8rem; margin-top: .15rem; }
+.cal-ring-section { display: flex; align-items: center; gap: 1.2rem; padding: 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 1rem 1.2rem; }
+.macro-progress-section { padding: 0 1.2rem 1.2rem; }
+.macro-progress-row { display: flex; align-items: center; gap: .8rem; margin-bottom: .7rem; }
+.macro-progress-row .mp-label { font-size: .8rem; width: 70px; flex-shrink: 0; }
+.macro-progress-row .mp-val { font-size: .8rem; color: var(--muted); width: 55px; text-align: right; flex-shrink: 0; }
+.macro-progress-row .progress-bar { flex: 1; }
+#page-log { padding: 0; }
+.log-content { padding: 0 1.2rem 1rem; }
+#page-meals { padding: 0; }
+.meals-content { padding: 0 1.2rem 1rem; }
+#page-profile { padding: 0; }
+.profile-content { padding: 0 1.2rem 1rem; }
+.chip { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 500; padding: .25rem .7rem; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+.chip.green { border-color: var(--accent); color: var(--accent); background: rgba(200,240,110,.08); }
+.chip.orange { border-color: var(--warn); color: var(--warn); background: rgba(240,160,90,.08); }
+.chip.red { border-color: var(--danger); color: var(--danger); background: rgba(224,92,92,.08); }
+.section-title { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin: 1rem 0 .5rem; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+@keyframes shimmer { to { background-position: 200% center; } }
+.skel { background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: var(--radius-sm); }
+.mt-1 { margin-top: .4rem; }
+.mt-2 { margin-top: .8rem; }
+.mt-3 { margin-top: 1.2rem; }
+.mb-1 { margin-bottom: .4rem; }
+.mb-2 { margin-bottom: .8rem; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.text-muted { color: var(--muted); font-size: .85rem; }
+.text-accent { color: var(--accent); }
+.empty-state { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: .9rem; }
+.empty-state svg { width: 40px; height: 40px; margin-bottom: .8rem; opacity: .4; }
+
+/* Auth divider for "or" between email and Google buttons */
+.auth-divider { display: flex; align-items: center; gap: .8rem; margin: 1.2rem 0 .8rem; color: var(--muted); font-size: .78rem; }
+.auth-divider .line { flex: 1; height: 1px; background: var(--border); }
+
+/* Unit toggle (segmented pill) */
+.unit-toggle { display: inline-flex; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px; gap: 2px; margin-bottom: .8rem; }
+.unit-toggle button { background: transparent; border: none; color: var(--muted); padding: .35rem .9rem; border-radius: 5px; cursor: pointer; font-family: var(--font-body); font-size: .78rem; font-weight: 500; letter-spacing: .03em; transition: all var(--transition); }
+.unit-toggle button.active { background: var(--accent); color: #0f1117; }
+.unit-toggle button:not(.active):hover { color: var(--text); }
+.unit-row-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .35rem; }
+
+/* Custom picker (replaces native <select> for iOS readability) */
+.picker-btn {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: .95rem;
+  padding: .7rem 1rem;
+  cursor: pointer;
+  text-align: left;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color var(--transition);
+}
+.picker-btn:hover, .picker-btn:focus { border-color: var(--accent); outline: none; }
+.picker-btn .picker-val { color: var(--text); font-weight: 500; flex: 1; }
+.picker-btn .picker-val.empty { color: var(--muted); font-weight: 400; }
+.picker-btn .picker-arrow { color: var(--muted); margin-left: .5rem; flex-shrink: 0; font-size: .7rem; }
+/* Compact picker for inline unit chooser */
+.picker-btn.picker-sm {
+  width: auto;
+  padding: .35rem .7rem;
+  font-size: .75rem;
+}
+.picker-btn.picker-sm .picker-val { font-weight: 500; }
+
+/* Picker sheet (bottom-sheet modal for selecting an option) */
+#picker-sheet { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:300; align-items:flex-end; }
+#picker-sheet.open { display:flex; }
+#picker-sheet .sheet {
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 1.2rem 1.2rem 1.5rem;
+  width: 100%;
+  max-height: 60dvh;
+  overflow-y: auto;
+  animation: slideUp .25s ease both;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0));
+}
+#picker-sheet .sheet h4 { font-family: var(--font-head); font-size: 1.1rem; margin-bottom: 1rem; }
+#picker-sheet .sheet .picker-opt {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem .8rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: .4rem;
+  cursor: pointer;
+  font-size: .95rem;
+  transition: all var(--transition);
+}
+#picker-sheet .sheet .picker-opt:hover { border-color: var(--accent); }
+#picker-sheet .sheet .picker-opt.selected { border-color: var(--accent); background: rgba(200,240,110,.08); }
+#picker-sheet .sheet .picker-opt .check { color: var(--accent); font-weight: 600; }
+
+/* PWA Install Modal Steps */
+.pwa-step-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: .7rem;
+  transition: border-color var(--transition);
+}
+.pwa-step-card:hover { border-color: rgba(200,240,110,.3); }
+.pwa-step-num {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #0f1117;
+  font-weight: 700;
+  font-size: .85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+.pwa-step-body { flex: 1; min-width: 0; }
+.pwa-step-title { font-weight: 600; font-size: .95rem; margin-bottom: .3rem; }
+.pwa-step-desc { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+.pwa-step-icon { margin-top: .6rem; opacity: .85; }
+</style>
+</head>
+<body>
+
+<!-- PWA INSTALL MODAL -->
+<div id="pwa-install-modal" class="modal-overlay" onclick="if(event.target===this)closePwaModal()">
+  <div class="modal-sheet" style="max-height:90dvh;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;">
+      <h2 style="font-size:1.3rem;">Install NutriLog</h2>
+      <button class="btn btn-ghost btn-sm" onclick="closePwaModal()" style="font-size:1.2rem;padding:.2rem .5rem;">✕</button>
+    </div>
+
+    <!-- iOS Guide -->
+    <div id="pwa-ios-guide">
+      <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.2rem;line-height:1.5;">
+        Add NutriLog to your Home Screen for a full-screen app experience — no App Store needed.
+      </p>
+      <div class="pwa-step-card">
+        <div class="pwa-step-num">1</div>
+        <div class="pwa-step-body">
+          <div class="pwa-step-title">Tap the Share button</div>
+          <div class="pwa-step-desc">Find the Share icon at the bottom of Safari — it looks like a box with an arrow pointing up.</div>
+          <div class="pwa-step-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="pwa-step-card">
+        <div class="pwa-step-num">2</div>
+        <div class="pwa-step-body">
+          <div class="pwa-step-title">Tap "Add to Home Screen"</div>
+          <div class="pwa-step-desc">Scroll down in the Share sheet and tap <strong style="color:var(--text)">Add to Home Screen</strong>.</div>
+          <div class="pwa-step-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              <line x1="14" y1="17" x2="20" y2="17"/><line x1="17" y1="14" x2="17" y2="20"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="pwa-step-card">
+        <div class="pwa-step-num">3</div>
+        <div class="pwa-step-body">
+          <div class="pwa-step-title">Tap "Add"</div>
+          <div class="pwa-step-desc">Confirm the name and tap <strong style="color:var(--text)">Add</strong> in the top-right corner. NutriLog will appear on your Home Screen!</div>
+          <div class="pwa-step-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div style="background:rgba(200,240,110,.07);border:1px solid rgba(200,240,110,.2);border-radius:var(--radius-sm);padding:.8rem 1rem;margin-top:1rem;font-size:.78rem;color:var(--muted);line-height:1.5;">
+        💡 <strong style="color:var(--text)">Safari only</strong> — iOS install requires Safari. If you're in Chrome or another browser, open this page in Safari first.
+      </div>
+    </div>
+
+    <!-- Android Guide (fallback when no native prompt) -->
+    <div id="pwa-android-guide" style="display:none;">
+      <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.2rem;line-height:1.5;">
+        Add NutriLog to your Home Screen for instant access — no Play Store needed.
+      </p>
+      <div class="pwa-step-card">
+        <div class="pwa-step-num">1</div>
+        <div class="pwa-step-body">
+          <div class="pwa-step-title">Open the browser menu</div>
+          <div class="pwa-step-desc">Tap the <strong style="color:var(--text)">⋮</strong> menu in the top-right corner of Chrome.</div>
+          <div class="pwa-step-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="5" r="1" fill="var(--accent)"/><circle cx="12" cy="12" r="1" fill="var(--accent)"/><circle cx="12" cy="19" r="1" fill="var(--accent)"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="pwa-step-card">
+        <div class="pwa-step-num">2</div>
+        <div class="pwa-step-body">
+          <div class="pwa-step-title">Tap "Add to Home screen"</div>
+          <div class="pwa-step-desc">Select <strong style="color:var(--text)">Add to Home screen</strong> or <strong style="color:var(--text)">Install app</strong> from the menu.</div>
+          <div class="pwa-step-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              <line x1="14" y1="17" x2="20" y2="17"/><line x1="17" y1="14" x2="17" y2="20"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="pwa-step-card">
+        <div class="pwa-step-num">3</div>
+        <div class="pwa-step-body">
+          <div class="pwa-step-title">Tap "Add"</div>
+          <div class="pwa-step-desc">Confirm the installation. NutriLog will appear on your Home Screen like a native app!</div>
+          <div class="pwa-step-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div style="background:rgba(200,240,110,.07);border:1px solid rgba(200,240,110,.2);border-radius:var(--radius-sm);padding:.8rem 1rem;margin-top:1rem;font-size:.78rem;color:var(--muted);line-height:1.5;">
+        💡 <strong style="color:var(--text)">Chrome recommended</strong> — for best results use Chrome or Edge. Firefox does not support PWA installation.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH PAGE -->
+<section class="page active" id="page-auth">
+  <div class="auth-card">
+    <div class="auth-logo">NutriLog</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</div>
+      <div class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</div>
+    </div>
+
+    <div id="auth-form">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <div id="auth-name-field" class="field" style="display:none">
+        <label>Full Name</label>
+        <input type="text" id="auth-name" placeholder="Your name"/>
+      </div>
+      <p id="auth-error" style="color:var(--danger);font-size:.82rem;margin-bottom:.8rem;display:none"></p>
+      <button class="btn btn-primary btn-full" id="auth-btn" onclick="handleAuth()">Sign In</button>
+
+      <div class="auth-divider"><div class="line"></div><span>or</span><div class="line"></div></div>
+
+      <button class="btn btn-secondary btn-full" id="google-btn" onclick="handleGoogleAuth()">
+        <svg width="16" height="16" viewBox="0 0 18 18" style="margin-right:.4rem;">
+          <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.79 2.71v2.26h2.9c1.7-1.56 2.69-3.86 2.69-6.61z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.46-.81 5.95-2.18l-2.9-2.26a5.4 5.4 0 0 1-3.05.85 5.36 5.36 0 0 1-5.04-3.7H.96v2.32A9 9 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.96 10.71A5.41 5.41 0 0 1 3.68 9c0-.59.1-1.17.28-1.71V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l3-2.32z"/>
+          <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A8.99 8.99 0 0 0 9 0 9 9 0 0 0 .96 4.97l3 2.32A5.36 5.36 0 0 1 9 3.58z"/>
+        </svg>
+        Continue with Google
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ONBOARDING -->
+<section class="page" id="page-onboard">
+  <p class="onboard-logo">NutriLog</p>
+  <p class="onboard-sub">Let's set up your profile to personalise your goals.</p>
+  <div class="step-indicator" id="step-indicator"></div>
+  <div class="step active" id="step-1">
+    <h2 class="mb-2">Basic Info</h2>
+    <p class="text-muted mb-2" style="font-size:.78rem;">Pick the unit you prefer for each measurement.</p>
+
+    <!-- Height: metric (cm) OR imperial (ft+in) -->
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem;">
+        <label style="margin:0;">Height</label>
+        <button type="button" class="picker-btn picker-sm" id="ob-h-unit" onclick="openPicker('ob-h-unit')">
+          <span class="picker-val">cm</span><span class="picker-arrow">▾</span>
+        </button>
+      </div>
+      <div id="ob-h-cm-wrap"><input type="number" id="ob-height-cm" placeholder="170" min="100" max="250"/></div>
+      <div id="ob-h-ftin-wrap" style="display:none;">
+        <div class="field-row" style="margin-bottom:0;">
+          <input type="number" id="ob-height-ft" placeholder="5 ft" min="3" max="8"/>
+          <input type="number" id="ob-height-in" placeholder="7 in" min="0" max="11" step="0.5"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weight: kg OR lb -->
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem;">
+        <label style="margin:0;">Weight</label>
+        <button type="button" class="picker-btn picker-sm" id="ob-w-unit" onclick="openPicker('ob-w-unit')">
+          <span class="picker-val">kg</span><span class="picker-arrow">▾</span>
+        </button>
+      </div>
+      <div id="ob-w-kg-wrap"><input type="number" id="ob-weight-kg" placeholder="70" min="30" max="300" step="0.1"/></div>
+      <div id="ob-w-lb-wrap" style="display:none;"><input type="number" id="ob-weight-lb" placeholder="155" min="60" max="660" step="0.1"/></div>
+    </div>
+
+    <div class="field-row">
+      <div class="field"><label>Age</label><input type="number" id="ob-age" placeholder="25" min="10" max="100"/></div>
+      <div class="field"><label>Gender</label>
+        <button type="button" class="picker-btn" id="ob-gender" onclick="openPicker('ob-gender')">
+          <span class="picker-val empty">Choose…</span><span class="picker-arrow">▾</span>
+        </button>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full mt-2" onclick="nextStep(2)">Continue →</button>
+  </div>
+  <div class="step" id="step-2">
+    <h2 class="mb-2">Body Measurements</h2>
+    <p class="text-muted mb-2" style="font-size:.82rem">Used to estimate body fat % (US Navy method)</p>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.8rem;margin-bottom:1rem;">
+      <p style="font-size:.85rem;margin-bottom:.5rem;">Don't know your measurements?</p>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="estimateBodyMeasures()" style="font-size:.78rem;">
+        ✨ Estimate from height &amp; weight
+      </button>
+      <p class="text-muted" style="font-size:.7rem;margin-top:.5rem;line-height:1.4;">
+        Estimates use US Navy / NHANES averages. Accurate to ±5% for typical body types — measure with a tape for precise body fat %.
+      </p>
+    </div>
+
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem;">
+        <label style="margin:0;">Neck</label>
+        <button type="button" class="picker-btn picker-sm" id="ob-neck-unit" onclick="openPicker('ob-neck-unit')">
+          <span class="picker-val">cm</span><span class="picker-arrow">▾</span>
+        </button>
+      </div>
+      <input type="number" id="ob-neck" placeholder="38" step="0.1"/>
+    </div>
+
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem;">
+        <label style="margin:0;">Waist</label>
+        <button type="button" class="picker-btn picker-sm" id="ob-waist-unit" onclick="openPicker('ob-waist-unit')">
+          <span class="picker-val">cm</span><span class="picker-arrow">▾</span>
+        </button>
+      </div>
+      <input type="number" id="ob-waist" placeholder="85" step="0.1"/>
+    </div>
+
+    <div class="field" id="ob-hip-field" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem;">
+        <label style="margin:0;">Hip — for females</label>
+        <button type="button" class="picker-btn picker-sm" id="ob-hip-unit" onclick="openPicker('ob-hip-unit')">
+          <span class="picker-val">cm</span><span class="picker-arrow">▾</span>
+        </button>
+      </div>
+      <input type="number" id="ob-hip" placeholder="95" step="0.1"/>
+    </div>
+
+    <div class="flex-between mt-2">
+      <button class="btn btn-secondary" onclick="goStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="nextStep(3)">Continue →</button>
+    </div>
+  </div>
+  <div class="step" id="step-3">
+    <h2 class="mb-2">Your Goal</h2>
+    <div class="field"><label>Activity Level</label>
+      <button type="button" class="picker-btn" id="ob-activity" onclick="openPicker('ob-activity')">
+        <span class="picker-val empty">Choose…</span><span class="picker-arrow">▾</span>
+      </button>
+    </div>
+    <div class="field"><label>Goal</label>
+      <button type="button" class="picker-btn" id="ob-goal" onclick="openPicker('ob-goal')">
+        <span class="picker-val empty">Choose…</span><span class="picker-arrow">▾</span>
+      </button>
+    </div>
+    <div class="field"><label>Diet Type</label>
+      <button type="button" class="picker-btn" id="ob-diet" onclick="openPicker('ob-diet')">
+        <span class="picker-val empty">Choose…</span><span class="picker-arrow">▾</span>
+      </button>
+    </div>
+    <div class="flex-between mt-2">
+      <button class="btn btn-secondary" onclick="goStep(2)">← Back</button>
+      <button class="btn btn-primary" onclick="saveOnboarding()">Finish Setup ✓</button>
+    </div>
+  </div>
+</section>
+
+<!-- HOME -->
+<section class="page has-nav" id="page-home">
+  <div class="home-header">
+    <div class="flex-between" style="margin-bottom:.4rem;">
+      <div style="flex:1;min-width:0;">
+        <p class="home-greeting">Good <span id="greeting-time">morning</span>,</p>
+        <p class="home-name" id="home-username">—</p>
+        <p class="home-date" id="home-date"></p>
+      </div>
+      <button class="btn btn-sm btn-secondary" id="install-btn" style="flex-shrink:0;align-self:flex-start;" onclick="handleInstallClick()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:.3rem;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Install app
+      </button>
+    </div>
+  </div>
+  <div style="padding:0 1.2rem">
+    <div class="cal-ring-section mt-2">
+      <div class="bmi-ring-wrap">
+        <div class="bmi-ring" id="cal-ring-wrap">
+          <svg width="110" height="110" viewBox="0 0 110 110">
+            <circle cx="55" cy="55" r="46" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle id="cal-ring-arc" cx="55" cy="55" r="46" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" style="transition:stroke-dashoffset .6s ease"/>
+          </svg>
+          <div class="bmi-ring-val">
+            <span class="num text-accent" id="cal-consumed">0</span>
+            <span class="lbl">kcal</span>
+          </div>
+        </div>
+        <p style="font-size:.72rem;color:var(--muted)">of <span id="cal-goal-label">—</span></p>
+      </div>
+      <div style="flex:1">
+        <div class="stat-grid">
+          <div class="stat-block"><div class="sv" id="home-bmi">—</div><div class="sl">BMI</div></div>
+          <div class="stat-block"><div class="sv" id="home-fat">—%</div><div class="sl">Body Fat</div></div>
+          <div class="stat-block" style="grid-column:1/-1"><div class="sv" id="home-lbm">— kg</div><div class="sl">Lean Body Mass</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="macro-progress-section">
+      <p class="section-title">Today's Macros</p>
+      <div class="macro-progress-row">
+        <span class="mp-label" style="color:var(--protein)">Protein</span>
+        <div class="progress-bar"><div class="progress-fill" id="prog-p" style="background:var(--protein);width:0%"></div></div>
+        <span class="mp-val" id="prog-p-val">0g</span>
+      </div>
+      <div class="macro-progress-row">
+        <span class="mp-label" style="color:var(--carbs)">Carbs</span>
+        <div class="progress-bar"><div class="progress-fill" id="prog-c" style="background:var(--carbs);width:0%"></div></div>
+        <span class="mp-val" id="prog-c-val">0g</span>
+      </div>
+      <div class="macro-progress-row">
+        <span class="mp-label" style="color:var(--fat)">Fat</span>
+        <div class="progress-bar"><div class="progress-fill" id="prog-f" style="background:var(--fat);width:0%"></div></div>
+        <span class="mp-val" id="prog-f-val">0g</span>
+      </div>
+    </div>
+    <div class="flex-between" style="margin-bottom:.4rem;">
+      <p class="section-title" style="margin:0" id="home-meals-title">Today's Meals</p>
+      <button class="btn btn-sm btn-secondary" onclick="showPage('log');setNav('log')">+ Log Meal</button>
+    </div>
+    <div class="flex-between" style="gap:.4rem;margin-bottom:.4rem;">
+      <button class="btn btn-sm btn-ghost" id="home-date-prev" aria-label="Previous day" style="padding:.3rem .6rem;">‹</button>
+      <input type="date" id="home-date-input" style="flex:1;padding:.4rem .7rem;font-size:.82rem;text-align:center;"/>
+      <button class="btn btn-sm btn-ghost" id="home-date-next" aria-label="Next day" style="padding:.3rem .6rem;">›</button>
+      <button class="btn btn-sm btn-ghost" id="home-date-today" style="padding:.3rem .6rem;font-size:.7rem;">Today</button>
+    </div>
+    <div id="home-meals-list" class="mt-1"></div>
+  </div>
+</section>
+
+<!-- LOG -->
+<section class="page has-nav" id="page-log">
+  <div class="topbar">
+    <span class="topbar-title">Diet Log</span>
+    <input type="date" id="log-date" style="width:auto;padding:.4rem .7rem;font-size:.82rem"/>
+  </div>
+  <div class="log-content">
+    <div class="card mb-2">
+      <p class="section-title" style="margin-top:0">Daily Totals</p>
+      <div class="macro-row">
+        <div class="macro-pill p"><span class="val" id="day-p">0</span><span class="lbl">Protein</span></div>
+        <div class="macro-pill c"><span class="val" id="day-c">0</span><span class="lbl">Carbs</span></div>
+        <div class="macro-pill f"><span class="val" id="day-f">0</span><span class="lbl">Fat</span></div>
+        <div class="macro-pill k"><span class="val" id="day-k">0</span><span class="lbl">kcal</span></div>
+      </div>
+    </div>
+    <div id="meal-sections"></div>
+    <button class="btn btn-primary btn-full" onclick="openAddMealModal()" style="position:sticky;bottom:calc(80px + env(safe-area-inset-bottom, 0));margin-top:1rem;box-shadow:0 -4px 16px rgba(15,17,23,.6);z-index:5;">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Add Meal / Food
+    </button>
+  </div>
+</section>
+
+<!-- MEALS -->
+<section class="page has-nav" id="page-meals">
+  <div class="topbar">
+    <span class="topbar-title">Meal Plans</span>
+    <button class="btn btn-sm btn-primary" onclick="openCreateMealModal()">+ New</button>
+  </div>
+  <div class="meals-content">
+    <p class="section-title">Quick Combos</p>
+    <div id="preset-meals-list"></div>
+    <p class="section-title">My Saved Meals</p>
+    <div id="saved-meals-list"><p class="empty-state">No saved meals yet. Create one!</p></div>
+  </div>
+</section>
+
+<!-- TRENDS -->
+<section class="page has-nav" id="page-trends">
+  <div class="topbar"><span class="topbar-title">Trends</span></div>
+  <div style="padding:0 1.2rem 1rem;">
+    <div class="card mb-2">
+      <div class="flex-between mb-1"><h3>Calorie intake</h3><span class="text-muted" id="trend-cal-range">Last 7 days</span></div>
+      <div style="position:relative;height:200px;width:100%;"><canvas id="chart-calories"></canvas></div>
+    </div>
+    <div class="card mb-2">
+      <div class="flex-between mb-1"><h3>Today's macros</h3></div>
+      <div style="position:relative;height:220px;width:100%;"><canvas id="chart-macros"></canvas></div>
+    </div>
+    <div class="card mb-2">
+      <div class="flex-between mb-1"><h3>Weight trend</h3><button class="btn btn-sm btn-secondary" onclick="openLogWeight()">+ Log weight</button></div>
+      <div style="position:relative;height:200px;width:100%;"><canvas id="chart-weight"></canvas></div>
+      <p class="text-muted mt-1" id="weight-empty" style="display:none;text-align:center;font-size:.82rem;">No weight entries yet. Log your first one.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PROFILE -->
+<section class="page has-nav" id="page-profile">
+  <div class="topbar">
+    <span class="topbar-title">Profile</span>
+    <button class="btn btn-sm btn-ghost" onclick="Auth.signOut().then(()=>showPage('auth'))">Sign Out</button>
+  </div>
+  <div class="profile-content">
+    <div class="card">
+      <div class="flex-between mb-2">
+        <h3>Body Stats</h3>
+        <button class="btn btn-sm btn-secondary" onclick="openEditProfile()">Edit</button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-block"><div class="sv" id="pf-height">—</div><div class="sl" id="pf-height-lbl">Height (cm)</div></div>
+        <div class="stat-block"><div class="sv" id="pf-weight">—</div><div class="sl" id="pf-weight-lbl">Weight (kg)</div></div>
+        <div class="stat-block"><div class="sv" id="pf-bmi">—</div><div class="sl">BMI</div></div>
+        <div class="stat-block"><div class="sv" id="pf-fat">—%</div><div class="sl">Body Fat</div></div>
+        <div class="stat-block"><div class="sv" id="pf-lbm">—</div><div class="sl" id="pf-lbm-lbl">LBM (kg)</div></div>
+        <div class="stat-block"><div class="sv" id="pf-cal">—</div><div class="sl">Daily Goal kcal</div></div>
+      </div>
+    </div>
+    <div class="card mt-2">
+      <h3 class="mb-2">Macro Targets / day</h3>
+      <div class="macro-row">
+        <div class="macro-pill p"><span class="val" id="pf-tp">—</span><span class="lbl">Protein g</span></div>
+        <div class="macro-pill c"><span class="val" id="pf-tc">—</span><span class="lbl">Carbs g</span></div>
+        <div class="macro-pill f"><span class="val" id="pf-tf">—</span><span class="lbl">Fat g</span></div>
+        <div class="macro-pill k"><span class="val" id="pf-tk">—</span><span class="lbl">kcal</span></div>
+      </div>
+    </div>
+    <div class="card mt-2">
+      <h3 class="mb-2">Settings</h3>
+      <div class="field"><label>Units</label>
+        <button type="button" class="picker-btn" id="pf-units-sel" onclick="openPicker('pf-units-sel')">
+          <span class="picker-val">Metric (cm, kg)</span><span class="picker-arrow">▾</span>
+        </button>
+      </div>
+      <div class="field"><label>Goal</label>
+        <button type="button" class="picker-btn" id="pf-goal-sel" onclick="openPicker('pf-goal-sel')">
+          <span class="picker-val">Maintain</span><span class="picker-arrow">▾</span>
+        </button>
+      </div>
+      <div class="field"><label>Diet Preference</label>
+        <button type="button" class="picker-btn" id="pf-diet-sel" onclick="openPicker('pf-diet-sel')">
+          <span class="picker-val">Vegetarian</span><span class="picker-arrow">▾</span>
+        </button>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:1.2rem 0 1rem;"/>
+      <button type="button" class="btn btn-secondary btn-full" onclick="resetEverything()" style="border-color:var(--danger);color:var(--danger);">
+        ↻ Reset everything (start fresh)
+      </button>
+      <p class="text-muted" style="font-size:.7rem;margin-top:.4rem;text-align:center;">Wipes profile, logs, and meals. Sign-in stays.</p>
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM NAV -->
+<nav id="main-nav">
+  <button class="nav-btn active" id="nav-home" onclick="showPage('home');setNav('home')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10"/></svg>
+    Home
+  </button>
+  <button class="nav-btn" id="nav-log" onclick="showPage('log');setNav('log')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    Log
+  </button>
+  <button class="nav-btn" id="nav-meals" onclick="showPage('meals');setNav('meals')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.5-1.5 4.5-3.5 5.4V20h-3v-7.6C8.5 11.5 7 9.5 7 7a5 5 0 015-5z"/></svg>
+    Meals
+  </button>
+  <button class="nav-btn" id="nav-trends" onclick="showPage('trends');setNav('trends');renderTrends()">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+    Trends
+  </button>
+  <button class="nav-btn" id="nav-profile" onclick="showPage('profile');setNav('profile')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    Profile
+  </button>
+</nav>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-add-meal">
+  <div class="modal-sheet">
+    <div class="flex-between mb-2"><h3>Add a Meal</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-add-meal')">✕</button></div>
+
+    <!-- Step 1: meal name -->
+    <div class="field" style="margin-bottom:1rem;">
+      <label>Meal Name</label>
+      <input type="text" id="am-meal-name" placeholder="e.g. Breakfast, Post-workout, Snack…"/>
+    </div>
+
+    <!-- Selected ingredients (running total at top) -->
+    <div id="am-selected-wrap" style="display:none;margin-bottom:1rem;">
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;margin:0 0 .5rem;">
+        <span>Ingredients (<span id="am-selected-count">0</span>)</span>
+        <span id="am-running-total" style="color:var(--accent);font-weight:600;text-transform:none;letter-spacing:0;font-size:.78rem;">0 kcal</span>
+      </div>
+      <div id="am-selected"></div>
+    </div>
+
+    <!-- Step 2: search -->
+    <div class="section-title" style="margin:.6rem 0 .4rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>Add ingredients</span>
+      <button class="btn btn-sm btn-secondary" id="am-mic-btn" onclick="startVoiceLog()" style="font-size:.7rem;padding:.3rem .7rem;">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:.25rem;"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        Voice
+      </button>
+    </div>
+    <div class="search-wrap mb-1">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="am-search" placeholder="Search 'paneer', 'milk', 'roti'…" oninput="filterFoods(this.value)"/>
+    </div>
+    <div class="food-list" id="am-food-list"></div>
+
+    <!-- Web search fallback -->
+    <button class="btn btn-secondary btn-full mt-1" id="am-web-search-btn" onclick="searchOpenFoodFacts('am')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:.3rem;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
+      Can't find it? Search the web
+    </button>
+    <button class="btn btn-ghost btn-full mt-1" onclick="openCustomIngredient('am')" style="font-size:.82rem;">
+      + Add custom ingredient (enter macros yourself)
+    </button>
+    <p class="text-muted mt-1" style="font-size:.72rem;text-align:center;">Web results from Open Food Facts. Custom ingredients save to your library.</p>
+
+    <button class="btn btn-primary btn-full mt-3" onclick="saveMealEntry()">Save Meal</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-create-meal">
+  <div class="modal-sheet">
+    <div class="flex-between mb-2"><h3 id="cm-title">Create Saved Meal</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-create-meal')">✕</button></div>
+
+    <div class="field" style="margin-bottom:1rem;">
+      <label>Meal Name</label>
+      <input type="text" id="cm-name" placeholder="e.g. Post-workout shake"/>
+    </div>
+
+    <div id="cm-selected-wrap" style="display:none;margin-bottom:1rem;">
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;margin:0 0 .5rem;">
+        <span>Ingredients (<span id="cm-selected-count">0</span>)</span>
+        <span id="cm-running-total" style="color:var(--accent);font-weight:600;text-transform:none;letter-spacing:0;font-size:.78rem;">0 kcal</span>
+      </div>
+      <div id="cm-selected"></div>
+    </div>
+
+    <div class="section-title" style="margin:.6rem 0 .4rem;">Add ingredients</div>
+    <div class="search-wrap mb-1">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="cm-search" placeholder="Search ingredient…" oninput="filterFoodsCM(this.value)"/>
+    </div>
+    <div class="food-list" id="cm-food-list"></div>
+
+    <button class="btn btn-secondary btn-full mt-1" onclick="searchOpenFoodFacts('cm')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:.3rem;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
+      Can't find it? Search the web
+    </button>
+    <button class="btn btn-ghost btn-full mt-1" onclick="openCustomIngredient('cm')" style="font-size:.82rem;">
+      + Add custom ingredient
+    </button>
+
+    <button class="btn btn-primary btn-full mt-3" onclick="saveCustomMeal()">Save Meal</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-profile">
+  <div class="modal-sheet">
+    <div class="flex-between mb-2"><h3>Update Measurements</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-edit-profile')">✕</button></div>
+
+    <div class="unit-row-label">Units</div>
+    <div class="unit-toggle" id="ep-unit-toggle">
+      <button type="button" data-units="metric" class="active" onclick="setEditUnits('metric')">cm / kg</button>
+      <button type="button" data-units="imperial" onclick="setEditUnits('imperial')">ft·in / lb</button>
+    </div>
+
+    <div id="ep-metric-fields">
+      <div class="field-row">
+        <div class="field"><label>Height (cm)</label><input type="number" id="ep-height-cm" step="0.1"/></div>
+        <div class="field"><label>Weight (kg)</label><input type="number" id="ep-weight-kg" step="0.1"/></div>
+      </div>
+    </div>
+    <div id="ep-imperial-fields" style="display:none">
+      <div class="field-row">
+        <div class="field"><label>Height (ft)</label><input type="number" id="ep-height-ft" min="3" max="8"/></div>
+        <div class="field"><label>Height (in)</label><input type="number" id="ep-height-in" min="0" max="11" step="0.5"/></div>
+      </div>
+      <div class="field"><label>Weight (lb)</label><input type="number" id="ep-weight-lb" step="0.1"/></div>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.7rem;margin-bottom:.8rem;">
+      <button type="button" class="btn btn-sm btn-secondary" onclick="estimateBodyMeasuresEdit()" style="font-size:.78rem;">
+        ✨ Estimate from height &amp; weight
+      </button>
+      <p class="text-muted" style="font-size:.7rem;margin-top:.4rem;line-height:1.4;">
+        Approximations may vary ±5%. Edit values after estimating if needed.
+      </p>
+    </div>
+
+    <div class="field-row">
+      <div class="field"><label id="ep-neck-label">Neck (cm)</label><input type="number" id="ep-neck" step="0.1"/></div>
+      <div class="field"><label id="ep-waist-label">Waist (cm)</label><input type="number" id="ep-waist" step="0.1"/></div>
+    </div>
+    <div class="field" id="ep-hip-wrap" style="display:none"><label id="ep-hip-label">Hip (cm)</label><input type="number" id="ep-hip" step="0.1"/></div>
+    <button class="btn btn-primary btn-full mt-2" onclick="saveEditProfile()">Update</button>
+  </div>
+</div>
+
+<!-- Log Weight Modal -->
+<div class="modal-overlay" id="modal-log-weight">
+  <div class="modal-sheet">
+    <div class="flex-between mb-2"><h3>Log Weight</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-log-weight')">✕</button></div>
+    <div class="field"><label>Date</label><input type="date" id="lw-date"/></div>
+    <div class="field"><label id="lw-weight-label">Weight (kg)</label><input type="number" id="lw-weight" step="0.1" placeholder="70"/></div>
+    <button class="btn btn-primary btn-full" onclick="saveLogWeight()">Save</button>
+  </div>
+</div>
+
+<!-- Voice Logging Modal -->
+<div class="modal-overlay" id="modal-voice">
+  <div class="modal-sheet" style="text-align:center;padding:2rem 1.2rem;">
+    <div class="flex-between mb-2"><h3 style="text-align:left;">Listening…</h3><button class="btn btn-ghost btn-sm" onclick="stopVoiceLog(false)">✕</button></div>
+    <div id="voice-pulse" style="margin:1.2rem auto;width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;animation:pulse 1.2s ease-in-out infinite;">
+      <svg width="36" height="36" fill="none" stroke="#0f1117" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+    </div>
+    <p class="text-muted" style="font-size:.85rem;">Speak slowly and clearly. Try:</p>
+    <p style="font-size:.9rem;color:var(--accent);margin-top:.3rem;">"two roti, one bowl dal, one paneer"</p>
+    <div id="voice-heard" style="margin-top:1rem;padding:.7rem;background:var(--surface2);border-radius:var(--radius-sm);min-height:2.5rem;font-size:.95rem;border:1px solid var(--border);text-align:left;"></div>
+    <p id="voice-status" class="text-muted" style="font-size:.78rem;margin-top:.6rem;min-height:1.2rem;"></p>
+    <div class="flex-between mt-3" style="gap:.5rem;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="stopVoiceLog(false)">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="stopVoiceLog(true)">Done ✓</button>
+    </div>
+  </div>
+</div>
+<style>@keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: .7; } }</style>
+
+<!-- Custom Ingredient Modal -->
+<div class="modal-overlay" id="modal-custom-ing">
+  <div class="modal-sheet">
+    <div class="flex-between mb-2"><h3>Add Custom Ingredient</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-custom-ing')">✕</button></div>
+    <p class="text-muted mb-2" style="font-size:.82rem;">Enter macros for ONE serving. You'll set quantity when logging.</p>
+    <div class="field"><label>Name</label><input type="text" id="ci-name" placeholder="e.g. Idli, Mom's biryani"/></div>
+    <div class="field"><label>Serving description</label><input type="text" id="ci-serving" placeholder="e.g. 1 piece, 1 bowl, 100g"/></div>
+    <div class="field-row">
+      <div class="field"><label>Calories (kcal)</label><input type="number" id="ci-cal" step="0.1" min="0" placeholder="200"/></div>
+      <div class="field"><label>Protein (g)</label><input type="number" id="ci-protein" step="0.1" min="0" placeholder="8"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Carbs (g)</label><input type="number" id="ci-carbs" step="0.1" min="0" placeholder="30"/></div>
+      <div class="field"><label>Fat (g)</label><input type="number" id="ci-fat" step="0.1" min="0" placeholder="5"/></div>
+    </div>
+    <button class="btn btn-primary btn-full mt-2" onclick="saveCustomIngredient()">Save & Add to Meal</button>
+  </div>
+</div>
+
+<!-- Custom picker bottom-sheet (used to replace native <select> on iOS) -->
+<div id="picker-sheet">
+  <div class="sheet">
+    <h4 id="picker-title">Choose</h4>
+    <div id="picker-options"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── Food DB ─────────────────────────────────
+// Source: Diet_Plan.xlsx → "Nutrition chart" sheet (canonical reference).
+// Each entry has macro values for ONE serving (defined by `serving`). Quantity multiplier is applied at log time.
+// Items added by web search get appended at runtime with id starting from 1000+.
+const FOOD_DB = [
+  { id:1,  name:"Nutrella",           serving:"100g",                       protein:52,    carbs:33,    fat:0.5,  sugar:0,    satFat:0,    calories:345    },
+  { id:2,  name:"Whey Protein",       serving:"1 scoop (45g Biozyme)",      protein:30,    carbs:17,    fat:5.6,  sugar:0,    satFat:0,    calories:175    },
+  { id:3,  name:"Masoor Dal",         serving:"100g",                       protein:28.57, carbs:60,    fat:2.86, sugar:0,    satFat:0,    calories:342.86 },
+  { id:4,  name:"Rajma",              serving:"100g",                       protein:24,    carbs:60,    fat:0.8,  sugar:0,    satFat:0,    calories:334    },
+  { id:5,  name:"Paneer",             serving:"100g",                       protein:21,    carbs:3.5,   fat:16,   sugar:89,   satFat:16,   calories:321    },
+  { id:6,  name:"Muscleblaze Oats",   serving:"1 bowl (50g + milk)",        protein:19,    carbs:41,    fat:14,   sugar:18,   satFat:1,    calories:356    },
+  { id:7,  name:"Chana",              serving:"100g",                       protein:19,    carbs:50,    fat:5.4,  sugar:11,   satFat:0.6,  calories:364    },
+  { id:8,  name:"Muscleblaze Muesli", serving:"1 bowl (50g + milk)",        protein:19,    carbs:38,    fat:17,   sugar:21,   satFat:2,    calories:373    },
+  { id:9,  name:"Greek Yogurt",       serving:"1 serving (150g)",           protein:14,    carbs:6,     fat:7.5,  sugar:6,    satFat:3.6,  calories:146    },
+  { id:10, name:"Dal",                serving:"1 bowl",                     protein:14,    carbs:30,    fat:3.6,  sugar:4.5,  satFat:0.6,  calories:222    },
+  { id:11, name:"Oats",               serving:"100g",                       protein:11.8,  carbs:69.4,  fat:6.6,  sugar:0,    satFat:2,    calories:407    },
+  { id:12, name:"Peanut Butter",      serving:"1 serving (32g)",            protein:10,    carbs:6,     fat:16,   sugar:0,    satFat:2,    calories:204    },
+  { id:13, name:"Eggs",               serving:"1 whole egg",                protein:6,     carbs:0,     fat:3.4,  sugar:0.6,  satFat:1.6,  calories:78     },
+  { id:14, name:"Poha",               serving:"1 bowl",                     protein:5.74,  carbs:46,    fat:7,    sugar:0,    satFat:0,    calories:270    },
+  { id:15, name:"Matar Mushroom",     serving:"1 bowl",                     protein:5,     carbs:15,    fat:4,    sugar:4,    satFat:0,    calories:105    },
+  { id:16, name:"Paratha",            serving:"1 paratha",                  protein:5,     carbs:41,    fat:9,    sugar:0,    satFat:4,    calories:265    },
+  { id:17, name:"Dal Paratha",        serving:"1 paratha",                  protein:4.2,   carbs:21,    fat:5.5,  sugar:0.6,  satFat:0.5,  calories:148    },
+  { id:18, name:"Curd",               serving:"100g",                       protein:4,     carbs:4.4,   fat:3.1,  sugar:0,    satFat:2,    calories:61.5   },
+  { id:19, name:"Cheese Slice",       serving:"1 slice",                    protein:4,     carbs:0,     fat:5,    sugar:0,    satFat:3,    calories:70     },
+  { id:20, name:"Roti",               serving:"1 roti (40g)",               protein:3.84,  carbs:22,    fat:0.52, sugar:0,    satFat:0,    calories:104    },
+  { id:21, name:"Egg White",          serving:"1 egg white",                protein:3.6,   carbs:0,     fat:0,    sugar:0,    satFat:0,    calories:17     },
+  { id:22, name:"Aloo Sabzi",         serving:"1 bowl",                     protein:3.5,   carbs:27,    fat:2.7,  sugar:3.5,  satFat:0,    calories:141    },
+  { id:23, name:"Milk",               serving:"100ml",                      protein:3.2,   carbs:5,     fat:6,    sugar:5,    satFat:3.8,  calories:87     },
+  { id:24, name:"Rice",               serving:"100g",                       protein:2.7,   carbs:27,    fat:0.2,  sugar:0.1,  satFat:0.1,  calories:130    },
+  { id:25, name:"Jowar Roti",         serving:"1 roti (40g)",               protein:2.5,   carbs:23,    fat:1.27, sugar:0,    satFat:0,    calories:110    },
+  { id:26, name:"Bread",              serving:"1 slice",                    protein:1.1,   carbs:5.7,   fat:0.3,  sugar:0.6,  satFat:0.1,  calories:32     },
+  { id:27, name:"Banana",             serving:"1 medium",                   protein:1.1,   carbs:11,    fat:0.2,  sugar:12,   satFat:0.1,  calories:90     },
+  { id:28, name:"Ghiya Sabzi",        serving:"1 bowl (100g)",              protein:0.79,  carbs:4.6,   fat:1.13, sugar:1.05, satFat:0,    calories:28.87  },
+  { id:29, name:"Apple",              serving:"1 medium",                   protein:0.5,   carbs:25,    fat:0.3,  sugar:19,   satFat:0.1,  calories:95     },
+  { id:30, name:"Peanuts",            serving:"30g (1 serving)",            protein:0.26,  carbs:0.16,  fat:0.49, sugar:0.04, satFat:0.07, calories:5.67   },
+  { id:31, name:"Almonds",            serving:"1 piece",                    protein:0.26,  carbs:0.24,  fat:0.61, sugar:0,    satFat:0,    calories:7      },
+  { id:32, name:"Butter",             serving:"1 tsp (~14g)",               protein:0,     carbs:0,     fat:12,   sugar:0,    satFat:0,    calories:100    },
+  { id:33, name:"Veg Salad",          serving:"1 cup (164g)",               protein:3.7,   carbs:11,    fat:6.8,  sugar:0,    satFat:0,    calories:114    },
+  { id:34, name:"Macaroni",           serving:"1 cup (120g)",               protein:7,     carbs:37,    fat:1.1,  sugar:0,    satFat:0,    calories:190    },
+  { id:35, name:"Ghee",               serving:"1 tbsp (14g)",               protein:0,     carbs:0,     fat:14,   sugar:0,    satFat:0,    calories:123    },
+];
+
+// Preset meals based on Diet_Plan.xlsx → "Meals" sheet
+const PRESET_MEALS = [
+  { name:"Peanut Butter Sandwich",  items:[{foodId:26,qty:2},{foodId:12,qty:1}] },
+  { name:"Chana Chaat",             items:[{foodId:33,qty:1},{foodId:7,qty:0.5},{foodId:30,qty:1}] },
+  { name:"Lunch (Paneer · Dal · Roti)", items:[{foodId:5,qty:1},{foodId:10,qty:0.5},{foodId:20,qty:2}] },
+  { name:"Egg Omelette Burger",     items:[{foodId:13,qty:2},{foodId:19,qty:1},{foodId:32,qty:1},{foodId:26,qty:4}] },
+  { name:"Cheese Macaroni",         items:[{foodId:33,qty:0.5},{foodId:34,qty:0.5},{foodId:19,qty:1}] },
+  { name:"Whey Shake",              items:[{foodId:2,qty:1},{foodId:23,qty:2}] },
+  { name:"Greek Yogurt + Banana",   items:[{foodId:9,qty:1},{foodId:27,qty:1}] },
+];
+
+// ─── Calc helpers ─────────────────────────────
+function macrosFor(foodId, qty) {
+  const f = FOOD_DB.find(x => x.id === foodId);
+  if (!f) return {protein:0,carbs:0,fat:0,calories:0};
+  return {
+    protein:  +(f.protein  * qty).toFixed(1),
+    carbs:    +(f.carbs    * qty).toFixed(1),
+    fat:      +(f.fat      * qty).toFixed(1),
+    calories: +(f.calories * qty).toFixed(1),
+  };
+}
+function sumMacros(items) {
+  return items.reduce((a,item)=>{
+    const m = macrosFor(item.foodId, item.qty);
+    a.protein  += m.protein;
+    a.carbs    += m.carbs;
+    a.fat      += m.fat;
+    a.calories += m.calories;
+    return a;
+  },{protein:0,carbs:0,fat:0,calories:0});
+}
+
+// ─── Body calc ────────────────────────────────
+function calcBMI(h,w) { return +(w / ((h/100)**2)).toFixed(1); }
+function calcBodyFat(gender,height,neck,waist,hip=0) {
+  if (gender==='male') {
+    return +(495/(1.0324-0.19077*Math.log10(waist-neck)+0.15456*Math.log10(height))-450).toFixed(1);
+  } else {
+    return +(495/(1.29579-0.35004*Math.log10(waist+hip-neck)+0.22100*Math.log10(height))-450).toFixed(1);
+  }
+}
+
+// ─── Body measurement approximations ─────────
+// Crude correlations from US Navy / NHANES averages. Returns cm values.
+// Accuracy ±5cm typical; user should edit if their build differs.
+function estimateNeckCm(gender, weightKg, heightCm) {
+  if (gender === 'female') return +(0.16 * weightKg + 24).toFixed(1);
+  return +(0.22 * weightKg + 22).toFixed(1);
+}
+function estimateWaistCm(gender, weightKg, heightCm) {
+  // Women's waist correlates with weight + slight height adjustment
+  if (gender === 'female') return +(0.55 * weightKg + 50).toFixed(1);
+  return +(0.5 * weightKg + 50).toFixed(1);
+}
+function estimateHipCm(gender, weightKg, heightCm) {
+  // Women's hip ≈ waist + 8 typical
+  if (gender === 'female') return +(estimateWaistCm('female', weightKg, heightCm) + 8).toFixed(1);
+  return +(estimateWaistCm('male', weightKg, heightCm) + 4).toFixed(1);  // not really used for males
+}
+
+// Onboarding step 2: pre-fill neck/waist/hip with estimates from current step 1 inputs
+function estimateBodyMeasures() {
+  const heightCm = readObHeightCm();
+  const weightKg = readObWeightKg();
+  const gender = getPickerValue('ob-gender');
+  if (!gender) { toast('Pick a gender first'); return; }
+  if (!heightCm || !weightKg) {
+    toast('Go back and fill height/weight first');
+    return;
+  }
+  const neckCm  = estimateNeckCm(gender, weightKg, heightCm);
+  const waistCm = estimateWaistCm(gender, weightKg, heightCm);
+  // Convert to whichever unit each field is currently set to
+  document.getElementById('ob-neck').value  = _obFieldUnits.neck  === 'in' ? cmToInches(neckCm).toFixed(1)  : neckCm;
+  document.getElementById('ob-waist').value = _obFieldUnits.waist === 'in' ? cmToInches(waistCm).toFixed(1) : waistCm;
+  if (gender === 'female') {
+    const hipCm = estimateHipCm('female', weightKg, heightCm);
+    document.getElementById('ob-hip').value = _obFieldUnits.hip === 'in' ? cmToInches(hipCm).toFixed(1) : hipCm;
+  }
+  toast('Estimated ✓ Edit values if you know yours');
+}
+
+// Edit-profile modal: same idea
+function estimateBodyMeasuresEdit() {
+  const heightCm = readEpHeightCm() || userProfile?.height || 0;
+  const weightKg = readEpWeightKg() || userProfile?.weight || 0;
+  const gender = userProfile?.gender || 'male';
+  if (!heightCm || !weightKg) {
+    toast('Enter height and weight first');
+    return;
+  }
+  const neckCm  = estimateNeckCm(gender, weightKg, heightCm);
+  const waistCm = estimateWaistCm(gender, weightKg, heightCm);
+  document.getElementById('ep-neck').value  = _epUnits === 'imperial' ? cmToInches(neckCm).toFixed(1)  : neckCm;
+  document.getElementById('ep-waist').value = _epUnits === 'imperial' ? cmToInches(waistCm).toFixed(1) : waistCm;
+  if (gender === 'female') {
+    const hipCm = estimateHipCm('female', weightKg, heightCm);
+    document.getElementById('ep-hip').value = _epUnits === 'imperial' ? cmToInches(hipCm).toFixed(1) : hipCm;
+  }
+  toast('Estimated ✓');
+}
+function calcTargets(profile) {
+  const {weight,height,age,gender,activity,goal} = profile;
+  let bmr = gender==='male'
+    ? 10*weight + 6.25*height - 5*age + 5
+    : 10*weight + 6.25*height - 5*age - 161;
+  let tdee = bmr * parseFloat(activity);
+  let goalCal = goal==='cut' ? tdee*0.8 : goal==='bulk' ? tdee*1.1 : tdee;
+  goalCal = Math.round(goalCal);
+  return {
+    calories: goalCal,
+    protein:  Math.round(weight * 2.2),
+    fat:      Math.round(goalCal * 0.25 / 9),
+    carbs:    Math.round((goalCal - weight*2.2*4 - goalCal*0.25) / 4),
+    maintenance: Math.round(tdee),
+  };
+}
+
+// ─── State ────────────────────────────────────
+let currentUser = null;
+let userProfile = null;
+let todayLog    = { meals: [] };
+// Home page has its own independent date + log so navigating dates on Home
+// doesn't mutate what the Log page is showing, and vice versa.
+let homeDate    = null;            // ISO date string; defaults to real today on init
+let homeLog     = { meals: [] };
+let savedMeals  = [];
+let amSelectedItems = [];
+let _editingLogIdx = null;   // null = adding new meal; integer = editing meal at todayLog.meals[idx]
+let cmSelectedItems = [];
+let editingMealId   = null;
+let _epUnits = 'metric';   // transient edit-profile units (resets when modal opens)
+const todayStr = () => new Date().toISOString().split('T')[0];
+
+// ─── Unit conversion ─────────────────────────
+// Storage stays metric (cm, kg). Display/input layer converts.
+const cmToInches = cm => cm / 2.54;
+const inchesToCm = inches => inches * 2.54;
+const kgToLbs    = kg => kg * 2.20462;
+const lbsToKg    = lb => lb / 2.20462;
+
+// Convert cm to {feet, inches} where inches is 0–11.99 (rounded to .5).
+function cmToFtIn(cm) {
+  if (!cm || cm <= 0) return { ft: 0, in: 0 };
+  const totalInches = cmToInches(cm);
+  const ft = Math.floor(totalInches / 12);
+  const inches = +(totalInches - ft * 12).toFixed(1);
+  return { ft, in: inches };
+}
+function ftInToCm(ft, inches) {
+  return inchesToCm((Number(ft) || 0) * 12 + (Number(inches) || 0));
+}
+
+// Read a length input (height, neck, waist, hip) and return cm.
+// For height in imperial mode, use the dedicated ftInToCm path.
+function readLengthCm(value, units) {
+  if (!value && value !== 0) return 0;
+  return units === 'imperial' ? inchesToCm(Number(value)) : Number(value);
+}
+// Format cm value for display in the user's preferred unit.
+function fmtLengthShort(cm, units) {
+  if (!cm) return '—';
+  if (units === 'imperial') return `${cmToInches(cm).toFixed(1)} in`;
+  return `${(+cm).toFixed(0)} cm`;
+}
+function fmtHeight(cm, units) {
+  if (!cm) return '—';
+  if (units === 'imperial') {
+    const { ft, in: inches } = cmToFtIn(cm);
+    return `${ft}' ${inches.toFixed(1)}"`;
+  }
+  return `${(+cm).toFixed(0)} cm`;
+}
+function fmtWeight(kg, units) {
+  if (!kg) return '—';
+  if (units === 'imperial') return `${kgToLbs(kg).toFixed(1)} lb`;
+  return `${(+kg).toFixed(1)} kg`;
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// ✦✦✦  PASTE YOUR FIREBASE CONFIG HERE  ✦✦✦
+// Get this from: Firebase Console → Project Settings → Your apps → Config
+// ═════════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDuHUlPQQOD7wsDAQF4co4Ov__WDv8TWQY",
+  authDomain: "nutrilog-a4946.firebaseapp.com",
+  projectId: "nutrilog-a4946",
+  storageBucket: "nutrilog-a4946.firebasestorage.app",
+  messagingSenderId: "1021477829605",
+  appId: "1:1021477829605:web:181f8ce076b952633b8d0c",
+  measurementId: "G-QCLEH4CQWD"
+};
+// ═════════════════════════════════════════════════════════════════════════
+
+let _fbApp, _auth, _db;
+function isFirebaseConfigured() {
+  return FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('YOUR_');
+}
+function initFB() {
+  if (_fbApp || !isFirebaseConfigured()) return;
+  try {
+    _fbApp = firebase.initializeApp(FIREBASE_CONFIG);
+    _auth  = firebase.auth();
+    _db = firebase.firestore();
+    // New API (Firebase 10+): use settings.cache instead of enablePersistence().
+    // Falls back to legacy enablePersistence if the new API isn't available.
+    try {
+      if (firebase.firestore.persistentLocalCache) {
+        _db.settings({
+          cache: firebase.firestore.persistentLocalCache({
+            tabManager: firebase.firestore.persistentMultipleTabManager()
+          })
+        });
+      } else {
+        _db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+      }
+    } catch (e) {
+      // Some compat builds don't expose persistentLocalCache — fall through to legacy
+      try { _db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch(_) {}
+    }
+  } catch(e) {
+    _fbApp = null; _auth = null; _db = null;
+    console.warn('Firebase init error — using local-only mode', e);
+  }
+}
+
+// ─── Auth ─────────────────────────────────────
+const Auth = {
+  signUp:  (e,p) => { if (!_auth) throw new Error('Firebase not configured'); return _auth.createUserWithEmailAndPassword(e,p); },
+  signIn:  (e,p) => { if (!_auth) throw new Error('Firebase not configured'); return _auth.signInWithEmailAndPassword(e,p); },
+  signOut: ()    => { if (!_auth) return Promise.resolve(); return _auth.signOut(); },
+};
+
+// ─── DB ───────────────────────────────────────
+const Db = {
+  async saveProfile(uid, data) {
+    if (!_db) return localSet('profile', data);
+    await _db.doc(`users/${uid}`).set(data, {merge:true});
+  },
+  async getProfile(uid) {
+    if (!_db) return localGet('profile');
+    const s = await _db.doc(`users/${uid}`).get();
+    return s.exists ? s.data() : null;
+  },
+  async saveLog(uid, date, data) {
+    if (!_db) return localSet(`log_${date}`, data);
+    await _db.doc(`users/${uid}/logs/${date}`).set(data, {merge:true});
+  },
+  async getLog(uid, date) {
+    if (!_db) return localGet(`log_${date}`) || {meals:[]};
+    const s = await _db.doc(`users/${uid}/logs/${date}`).get();
+    return s.exists ? s.data() : {meals:[]};
+  },
+  async saveMeal(uid, meal) {
+    if (!_db) {
+      const meals = localGet('saved_meals') || [];
+      const idx = meals.findIndex(m=>m.id===meal.id);
+      if (idx>=0) meals[idx]=meal; else meals.push(meal);
+      localSet('saved_meals', meals);
+      return;
+    }
+    const ref = meal.id ? _db.doc(`users/${uid}/meals/${meal.id}`) : _db.collection(`users/${uid}/meals`).doc();
+    await ref.set({...meal, id:ref.id}, {merge:true});
+    return ref.id;
+  },
+  async getMeals(uid) {
+    if (!_db) return localGet('saved_meals') || [];
+    const s = await _db.collection(`users/${uid}/meals`).get();
+    return s.docs.map(d=>d.data());
+  },
+  async deleteMeal(uid, mealId) {
+    if (!_db) {
+      const meals = (localGet('saved_meals')||[]).filter(m=>m.id!==mealId);
+      localSet('saved_meals', meals);
+      return;
+    }
+    await _db.doc(`users/${uid}/meals/${mealId}`).delete();
+  },
+
+  // ─── Custom Foods ──────────────────────────
+  // Admin (ADMIN_UID) writes to globalFoods/{id} — visible to ALL users.
+  // Non-admin users write to users/{uid}/foods/{id} — visible only to themselves.
+  // Everyone reads BOTH on boot and merges into FOOD_DB.
+  async saveCustomFood(uid, food) {
+    if (!_db) {
+      const stored = localGet('custom_foods') || [];
+      const idx = stored.findIndex(f => f.id === food.id);
+      if (idx >= 0) stored[idx] = food; else stored.push(food);
+      localSet('custom_foods', stored);
+      return food.id;
+    }
+    const collection = (uid === ADMIN_UID) ? 'globalFoods' : `users/${uid}/foods`;
+    const docId = String(food.id);
+    await _db.doc(`${collection}/${docId}`).set(food, { merge: true });
+    return food.id;
+  },
+  async getGlobalFoods() {
+    if (!_db) return [];
+    try {
+      const s = await _db.collection('globalFoods').get();
+      return s.docs.map(d => ({ ...d.data(), source: 'global' }));
+    } catch (e) {
+      console.warn('[NutriLog] getGlobalFoods failed (rules?):', e);
+      return [];
+    }
+  },
+  async getMyCustomFoods(uid) {
+    if (!_db) return localGet('custom_foods') || [];
+    try {
+      const s = await _db.collection(`users/${uid}/foods`).get();
+      return s.docs.map(d => ({ ...d.data(), source: 'custom' }));
+    } catch (e) {
+      console.warn('[NutriLog] getMyCustomFoods failed:', e);
+      return [];
+    }
+  },
+  async deleteCustomFood(uid, foodId, isGlobal) {
+    if (!_db) {
+      const stored = (localGet('custom_foods') || []).filter(f => f.id !== foodId);
+      localSet('custom_foods', stored);
+      return;
+    }
+    const collection = isGlobal ? 'globalFoods' : `users/${uid}/foods`;
+    await _db.doc(`${collection}/${foodId}`).delete();
+  },
+};
+
+// Admin who can write to the shared global ingredient library.
+// Anyone else's "Add custom ingredient" stays private to their account.
+const ADMIN_UID = 'hOzb36y3uVPZl28c6WxwUkEunC43';
+function isAdmin() { return currentUser?.uid === ADMIN_UID; }
+function localSet(k,v) { localStorage.setItem('nl_'+k, JSON.stringify(v)); }
+function localGet(k)   { try { return JSON.parse(localStorage.getItem('nl_'+k)); } catch { return null; } }
+
+// ─── Auth page ────────────────────────────────
+let authMode = 'signin';
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0)===(mode==='signin')));
+  document.getElementById('auth-btn').textContent = mode==='signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('auth-name-field').style.display = mode==='signup' ? 'block' : 'none';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass  = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+  if (!email || !pass) { showErr(errEl, 'Please fill all fields.'); return; }
+  if (!isFirebaseConfigured()) {
+    showErr(errEl, 'Firebase not configured. Paste your Firebase config in the FIREBASE_CONFIG block.');
+    return;
+  }
+  initFB();
+  try {
+    if (authMode==='signup') {
+      const cred = await Auth.signUp(email, pass);
+      currentUser = { uid: cred.user.uid, email };
+    } else {
+      const cred = await Auth.signIn(email, pass);
+      currentUser = { uid: cred.user.uid, email };
+    }
+    await afterLogin();
+  } catch(e) {
+    showErr(errEl, e.message || 'Auth failed.');
+  }
+}
+
+async function handleGoogleAuth() {
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+  if (!isFirebaseConfigured()) {
+    showErr(errEl, 'Firebase not configured. Paste your Firebase config in the FIREBASE_CONFIG block.');
+    return;
+  }
+  initFB();
+  if (!_auth) {
+    showErr(errEl, 'Firebase auth failed to initialise. Check your config.');
+    return;
+  }
+  // Detect iOS PWA standalone mode: popups don't work there. Use redirect instead.
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const useRedirect = isStandalone || isIOS;
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    if (useRedirect) {
+      // signInWithRedirect leaves the page; the result is handled on return
+      // by getRedirectResult in the boot section.
+      await _auth.signInWithRedirect(provider);
+      return;  // navigation happens — code below won't execute
+    }
+    const result = await _auth.signInWithPopup(provider);
+    currentUser = { uid: result.user.uid, email: result.user.email, displayName: result.user.displayName };
+    if (result.user.displayName) {
+      const nameEl = document.getElementById('auth-name');
+      if (nameEl) nameEl.value = result.user.displayName;
+    }
+    await afterLogin();
+  } catch (e) {
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    if (e.code === 'auth/popup-blocked') { showErr(errEl, 'Popup blocked. Allow popups for this site and try again.'); return; }
+    if (e.code === 'auth/operation-not-allowed') { showErr(errEl, 'Google sign-in not enabled. Enable it in Firebase Console → Authentication → Sign-in method.'); return; }
+    if (e.code === 'auth/unauthorized-domain') { showErr(errEl, 'This domain is not authorised. Add ' + location.hostname + ' to Firebase Console → Authentication → Settings → Authorised domains.'); return; }
+    showErr(errEl, e.message || 'Google sign-in failed.');
+  }
+}
+
+function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+
+// ─── Post-login ───────────────────────────────
+async function afterLogin() {
+  const uid = currentUser?.uid || 'local';
+  // Load global + private custom foods into FOOD_DB BEFORE rendering
+  await loadFirestoreFoods();
+  userProfile = await Db.getProfile(uid);
+  if (!userProfile) {
+    buildStepIndicator();
+    showPage('onboard');
+  } else {
+    await loadTodayLog();
+    homeDate = todayStr();
+    await loadHomeLog();
+    savedMeals = await Db.getMeals(uid);
+    showPage('home');
+    showNav();
+    wireHomeDateNav();
+    renderHome();
+    renderMeals();
+    initLogPage();
+  }
+}
+
+async function demoLogin() {
+  currentUser = { uid: 'local', email: 'demo@nutrilog.app' };
+  await afterLogin();
+}
+
+// ─── Onboarding ───────────────────────────────
+let currentStep = 1;
+const TOTAL_STEPS = 3;
+
+// Per-field unit tracking. Each measurement remembers its own current unit
+// independently. Storage stays metric — only display/input layer differs.
+let _obFieldUnits = {
+  height: 'cm',     // 'cm' | 'ftin'
+  weight: 'kg',     // 'kg' | 'lb'
+  neck:   'cm',     // 'cm' | 'in'
+  waist:  'cm',     // 'cm' | 'in'
+  hip:    'cm'      // 'cm' | 'in'
+};
+
+// Called when a per-field unit dropdown changes. Converts the existing typed
+// value to the new unit so toggling never wipes the input.
+function onObFieldUnitChange(field, newUnit) {
+  const old = _obFieldUnits[field];
+  if (old === newUnit) return;
+
+  if (field === 'height') {
+    // Capture in cm regardless of old unit
+    let cm = 0;
+    if (old === 'cm') cm = +document.getElementById('ob-height-cm').value || 0;
+    else cm = ftInToCm(+document.getElementById('ob-height-ft').value || 0, +document.getElementById('ob-height-in').value || 0);
+    _obFieldUnits.height = newUnit;
+    document.getElementById('ob-h-cm-wrap').style.display   = newUnit === 'cm'   ? '' : 'none';
+    document.getElementById('ob-h-ftin-wrap').style.display = newUnit === 'ftin' ? '' : 'none';
+    if (cm > 0) {
+      if (newUnit === 'cm') document.getElementById('ob-height-cm').value = cm.toFixed(1).replace(/\.0$/, '');
+      else {
+        const { ft, in: inches } = cmToFtIn(cm);
+        document.getElementById('ob-height-ft').value = ft;
+        document.getElementById('ob-height-in').value = inches;
+      }
+    }
+  } else if (field === 'weight') {
+    let kg = 0;
+    if (old === 'kg') kg = +document.getElementById('ob-weight-kg').value || 0;
+    else kg = lbsToKg(+document.getElementById('ob-weight-lb').value || 0);
+    _obFieldUnits.weight = newUnit;
+    document.getElementById('ob-w-kg-wrap').style.display = newUnit === 'kg' ? '' : 'none';
+    document.getElementById('ob-w-lb-wrap').style.display = newUnit === 'lb' ? '' : 'none';
+    if (kg > 0) {
+      if (newUnit === 'kg') document.getElementById('ob-weight-kg').value = kg.toFixed(1).replace(/\.0$/, '');
+      else document.getElementById('ob-weight-lb').value = kgToLbs(kg).toFixed(1);
+    }
+  } else {
+    // neck/waist/hip — single input, just convert value in place
+    const inputId = `ob-${field}`;
+    const cur = +document.getElementById(inputId).value || 0;
+    let cm = old === 'cm' ? cur : inchesToCm(cur);
+    _obFieldUnits[field] = newUnit;
+    if (cm > 0) {
+      document.getElementById(inputId).value = newUnit === 'cm' ? cm.toFixed(1).replace(/\.0$/, '') : cmToInches(cm).toFixed(1);
+    }
+  }
+}
+
+// Readers — always return metric, regardless of the per-field selected unit
+function readObHeightCm() {
+  if (_obFieldUnits.height === 'ftin') {
+    const ft = +document.getElementById('ob-height-ft').value || 0;
+    const inches = +document.getElementById('ob-height-in').value || 0;
+    if (!ft && !inches) return 0;
+    return ftInToCm(ft, inches);
+  }
+  return +document.getElementById('ob-height-cm').value || 0;
+}
+function readObWeightKg() {
+  if (_obFieldUnits.weight === 'lb') {
+    const lb = +document.getElementById('ob-weight-lb').value || 0;
+    return lb ? lbsToKg(lb) : 0;
+  }
+  return +document.getElementById('ob-weight-kg').value || 0;
+}
+function readObBodyMeasureCm(field) {
+  // field: 'neck' | 'waist' | 'hip'
+  const val = +document.getElementById(`ob-${field}`).value || 0;
+  if (!val) return 0;
+  return _obFieldUnits[field] === 'in' ? inchesToCm(val) : val;
+}
+
+function buildStepIndicator() {
+  const el = document.getElementById('step-indicator');
+  el.innerHTML = Array.from({length:TOTAL_STEPS}, (_,i)=>`<div class="step-dot" id="dot-${i+1}"></div>`).join('');
+  updateDots();
+  // Register all pickers used in onboarding
+  registerPicker('ob-h-unit',     { label:'Height unit',  current:'cm',     options:[{value:'cm',label:'cm'},{value:'ftin',label:'ft + in'}], onChange: v => onObFieldUnitChange('height', v) });
+  registerPicker('ob-w-unit',     { label:'Weight unit',  current:'kg',     options:[{value:'kg',label:'kg'},{value:'lb',label:'lb'}],         onChange: v => onObFieldUnitChange('weight', v) });
+  registerPicker('ob-neck-unit',  { label:'Neck unit',    current:'cm',     options:[{value:'cm',label:'cm'},{value:'in',label:'in'}],         onChange: v => onObFieldUnitChange('neck', v) });
+  registerPicker('ob-waist-unit', { label:'Waist unit',   current:'cm',     options:[{value:'cm',label:'cm'},{value:'in',label:'in'}],         onChange: v => onObFieldUnitChange('waist', v) });
+  registerPicker('ob-hip-unit',   { label:'Hip unit',     current:'cm',     options:[{value:'cm',label:'cm'},{value:'in',label:'in'}],         onChange: v => onObFieldUnitChange('hip', v) });
+  registerPicker('ob-gender',     { label:'Gender',       current:null, placeholder:'Choose…', options:[{value:'male',label:'Male'},{value:'female',label:'Female'}], onChange: v => onGenderChange(v) });
+  registerPicker('ob-activity',   { label:'Activity Level', current:'1.55', options:[
+    {value:'1.2',  label:'Sedentary (desk job)'},
+    {value:'1.375',label:'Lightly active (1-3 days/wk)'},
+    {value:'1.55', label:'Moderately active (3-5 days/wk)'},
+    {value:'1.725',label:'Very active (6-7 days/wk)'},
+    {value:'1.9',  label:'Athlete (2x/day)'}
+  ]});
+  registerPicker('ob-goal',       { label:'Goal',     current:'maintain', options:[
+    {value:'cut',     label:'Cut (lose fat)'},
+    {value:'maintain',label:'Maintain'},
+    {value:'bulk',    label:'Bulk (gain muscle)'}
+  ]});
+  registerPicker('ob-diet',       { label:'Diet Type',current:'veg', options:[
+    {value:'veg',   label:'Vegetarian'},
+    {value:'egg',   label:'Eggetarian'},
+    {value:'nonveg',label:'Non-Vegetarian'}
+  ]});
+}
+
+// Show the hip field if user picks female
+function onGenderChange(value) {
+  const hipField = document.getElementById('ob-hip-field');
+  if (hipField) hipField.style.display = value === 'female' ? '' : 'none';
+}
+function updateDots() {
+  for(let i=1;i<=TOTAL_STEPS;i++) {
+    document.getElementById(`dot-${i}`)?.classList.toggle('done', i<=currentStep);
+  }
+}
+function goStep(n) {
+  document.getElementById(`step-${currentStep}`)?.classList.remove('active');
+  currentStep = n;
+  document.getElementById(`step-${currentStep}`)?.classList.add('active');
+  updateDots();
+}
+function nextStep(n) {
+  const vals = getStepValues(currentStep);
+  if (!vals) return;
+  goStep(n);
+  if (n===2) {
+    document.getElementById('ob-hip-field').style.display = (getPickerValue('ob-gender')==='female') ? 'block' : 'none';
+  }
+}
+function getStepValues(step) {
+  if (step===1) {
+    const h = readObHeightCm();
+    const w = readObWeightKg();
+    const a = +document.getElementById('ob-age').value;
+    const g = getPickerValue('ob-gender');
+    if (!h||!w||!a||!g) { toast('Please fill all fields including gender'); return null; }
+    return true;
+  }
+  if (step===2) {
+    const n  = +document.getElementById('ob-neck').value;
+    const wt = +document.getElementById('ob-waist').value;
+    if (!n||!wt) { toast('Please fill measurements'); return null; }
+    return true;
+  }
+  return true;
+}
+async function saveOnboarding() {
+  const height   = readObHeightCm();
+  const weight   = readObWeightKg();
+  const age      = +document.getElementById('ob-age').value;
+  const gender   = getPickerValue('ob-gender') || 'male';
+  const neck     = readObBodyMeasureCm('neck');
+  const waist    = readObBodyMeasureCm('waist');
+  const hip      = readObBodyMeasureCm('hip');
+  const activity = getPickerValue('ob-activity') || '1.55';
+  const goal     = getPickerValue('ob-goal') || 'maintain';
+  const diet     = getPickerValue('ob-diet') || 'veg';
+  const name     = document.getElementById('auth-name').value || currentUser?.email?.split('@')[0] || 'User';
+  const fat = calcBodyFat(gender,height,neck,waist,hip);
+  const lbm = +(weight*(1-fat/100)).toFixed(1);
+  const bmi = calcBMI(height,weight);
+  const targets = calcTargets({weight,height,age,gender,activity,goal});
+  // Derive a coarse 'units' for backward-compat displays (Home/Profile use this).
+  // Imperial if at least height OR weight chosen non-metric.
+  const overallUnits = (_obFieldUnits.height === 'ftin' || _obFieldUnits.weight === 'lb') ? 'imperial' : 'metric';
+  userProfile = {
+    height, weight, age, gender, neck, waist, hip, activity, goal, diet, name,
+    fat, lbm, bmi, targets,
+    units: overallUnits,
+    fieldUnits: { ...ns_obFieldUnitsClone() },
+    updatedAt: Date.now()
+  };
+  await Db.saveProfile(currentUser?.uid||'local', userProfile);
+  await loadTodayLog();
+  homeDate = todayStr();
+  await loadHomeLog();
+  savedMeals = [];
+  showPage('home');
+  showNav();
+  wireHomeDateNav();
+  renderHome();
+  renderMeals();
+  initLogPage();
+}
+
+// Helper to clone field-units snapshot (used so storage doesn't share reference)
+function ns_obFieldUnitsClone() { return JSON.parse(JSON.stringify(_obFieldUnits)); }
+
+// ─── Page navigation ──────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${id}`)?.classList.add('active');
+}
+function showNav() { document.getElementById('main-nav').classList.add('visible'); }
+function setNav(id) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`nav-${id}`)?.classList.add('active');
+}
+
+// ─── Home render ──────────────────────────────
+function renderHome() {
+  if (!userProfile) return;
+  const p = userProfile;
+  const t = p.targets;
+  const h = new Date().getHours();
+  document.getElementById('greeting-time').textContent = h<12?'morning':h<17?'afternoon':'evening';
+  document.getElementById('home-username').textContent = p.name || 'there';
+
+  // Home now shows the date the USER picked (not real today).
+  if (!homeDate) homeDate = todayStr();
+  const homeDateInput = document.getElementById('home-date-input');
+  if (homeDateInput && homeDateInput.value !== homeDate) homeDateInput.value = homeDate;
+  document.getElementById('home-date').textContent = formatHomeDateLabel(homeDate);
+
+  // Update header copy: "Today's Macros / Meals" only if the date IS today;
+  // otherwise label them with the chosen date so it's unambiguous.
+  const isReallyToday = homeDate === todayStr();
+  const macrosTitle = document.querySelector('.macro-progress-section .section-title');
+  if (macrosTitle) macrosTitle.textContent = isReallyToday ? "Today's Macros" : `Macros · ${formatHomeDateShort(homeDate)}`;
+  const mealsTitle = document.getElementById('home-meals-title');
+  if (mealsTitle) mealsTitle.textContent = isReallyToday ? "Today's Meals" : `Meals · ${formatHomeDateShort(homeDate)}`;
+
+  document.getElementById('home-bmi').textContent = p.bmi;
+  document.getElementById('home-fat').textContent = `${p.fat}%`;
+  document.getElementById('home-lbm').textContent = fmtWeight(p.lbm, p.units || 'metric');
+  const consumed = homeTotals().calories;
+  const goal = t.calories;
+  document.getElementById('cal-goal-label').textContent = `${goal} kcal`;
+  document.getElementById('cal-consumed').textContent = Math.round(consumed);
+  const pct = Math.min(consumed/goal,1);
+  const circ = 2*Math.PI*46;
+  document.getElementById('cal-ring-arc').style.strokeDashoffset = circ*(1-pct);
+  const totals = homeTotals();
+  setBar('p', totals.protein, t.protein, 'g');
+  setBar('c', totals.carbs,   t.carbs,   'g');
+  setBar('f', totals.fat,     t.fat,     'g');
+  renderHomeMeals();
+}
+function setBar(m, val, target, unit) {
+  const pct = Math.min(val/target*100,100);
+  document.getElementById(`prog-${m}`).style.width = pct+'%';
+  document.getElementById(`prog-${m}-val`).textContent = `${Math.round(val)}/${target}${unit}`;
+}
+function renderHomeMeals() {
+  const el = document.getElementById('home-meals-list');
+  if (!homeLog.meals?.length) {
+    const empty = (homeDate && homeDate !== todayStr())
+      ? `<p class="empty-state">No meals logged for ${formatHomeDateShort(homeDate)}</p>`
+      : `<p class="empty-state">No meals logged today</p>`;
+    el.innerHTML = empty;
+    return;
+  }
+  el.innerHTML = homeLog.meals.map(meal=>{
+    const m = sumMacros(meal.items);
+    return `<div class="meal-card" style="margin-bottom:.6rem"><div class="flex-between"><span style="font-weight:600">${meal.name}</span><span class="text-accent" style="font-size:.85rem">${Math.round(m.calories)} kcal</span></div><div class="macro-row mt-1"><div class="macro-pill p"><span class="val" style="font-size:.9rem">${m.protein.toFixed(1)}</span><span class="lbl">P</span></div><div class="macro-pill c"><span class="val" style="font-size:.9rem">${m.carbs.toFixed(1)}</span><span class="lbl">C</span></div><div class="macro-pill f"><span class="val" style="font-size:.9rem">${m.fat.toFixed(1)}</span><span class="lbl">F</span></div><div class="macro-pill k"><span class="val" style="font-size:.9rem">${Math.round(m.calories)}</span><span class="lbl">kcal</span></div></div></div>`;
+  }).join('');
+}
+function homeTotals() {
+  if (!homeLog.meals?.length) return {protein:0,carbs:0,fat:0,calories:0};
+  return homeLog.meals.reduce((a,meal)=>{
+    const m=sumMacros(meal.items);
+    a.protein+=m.protein; a.carbs+=m.carbs; a.fat+=m.fat; a.calories+=m.calories;
+    return a;
+  },{protein:0,carbs:0,fat:0,calories:0});
+}
+// Kept for backward compatibility (callers that compute totals over today's log)
+function todayTotals() {
+  if (!todayLog.meals?.length) return {protein:0,carbs:0,fat:0,calories:0};
+  return todayLog.meals.reduce((a,meal)=>{
+    const m=sumMacros(meal.items);
+    a.protein+=m.protein; a.carbs+=m.carbs; a.fat+=m.fat; a.calories+=m.calories;
+    return a;
+  },{protein:0,carbs:0,fat:0,calories:0});
+}
+
+// ─── Home date helpers ────────────────────────────────
+function formatHomeDateLabel(iso) {
+  // "Wednesday, 30 April"
+  const d = parseLocalDate(iso);
+  return d.toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long'});
+}
+function formatHomeDateShort(iso) {
+  // "30 Apr"
+  const d = parseLocalDate(iso);
+  return d.toLocaleDateString('en-IN', {day:'numeric', month:'short'});
+}
+function parseLocalDate(iso) {
+  // Build a Date in local time (avoid UTC parsing edge cases that shift by a day)
+  const [y,m,d] = iso.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function shiftHomeDate(deltaDays) {
+  const d = parseLocalDate(homeDate || todayStr());
+  d.setDate(d.getDate() + deltaDays);
+  homeDate = d.toISOString().split('T')[0];
+  loadHomeLog().then(renderHome);
+}
+async function loadHomeLog() {
+  const uid = currentUser?.uid || 'local';
+  if (!homeDate) homeDate = todayStr();
+  homeLog = await Db.getLog(uid, homeDate);
+  if (!homeLog.meals) homeLog.meals = [];
+}
+function wireHomeDateNav() {
+  const input = document.getElementById('home-date-input');
+  const prev  = document.getElementById('home-date-prev');
+  const next  = document.getElementById('home-date-next');
+  const today = document.getElementById('home-date-today');
+  if (!input || input._wired) return;
+  input._wired = true;
+  // Set max to today so users can't pick the future
+  input.max = todayStr();
+  input.addEventListener('change', async e => {
+    homeDate = e.target.value || todayStr();
+    await loadHomeLog();
+    renderHome();
+  });
+  prev?.addEventListener('click', () => shiftHomeDate(-1));
+  next?.addEventListener('click', () => {
+    if (!homeDate || homeDate < todayStr()) shiftHomeDate(+1);
+  });
+  today?.addEventListener('click', async () => {
+    homeDate = todayStr();
+    await loadHomeLog();
+    renderHome();
+  });
+}
+
+// ─── Log page ─────────────────────────────────
+function initLogPage() {
+  const d = document.getElementById('log-date');
+  d.value = todayStr();
+  d.addEventListener('change', async e => {
+    await loadTodayLog(e.target.value);
+    renderLogPage();
+    renderHome();
+  });
+  renderLogPage();
+}
+async function loadTodayLog(date=todayStr()) {
+  const uid = currentUser?.uid||'local';
+  todayLog = await Db.getLog(uid, date);
+  if (!todayLog.meals) todayLog.meals = [];
+}
+function renderLogPage() {
+  const t = todayTotals();
+  document.getElementById('day-p').textContent = t.protein.toFixed(1);
+  document.getElementById('day-c').textContent = t.carbs.toFixed(1);
+  document.getElementById('day-f').textContent = t.fat.toFixed(1);
+  document.getElementById('day-k').textContent = Math.round(t.calories);
+  const el = document.getElementById('meal-sections');
+  if (!todayLog.meals?.length) {
+    el.innerHTML = `<p class="empty-state"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>No meals logged. Tap below to add.</p>`;
+    return;
+  }
+  el.innerHTML = todayLog.meals.map((meal,idx)=>{
+    const m=sumMacros(meal.items);
+    const rows = meal.items.map(item=>{
+      const f=FOOD_DB.find(x=>x.id===item.foodId);
+      const im=macrosFor(item.foodId,item.qty);
+      return `<div class="meal-item-row"><span>${f?.name||'?'} ×${item.qty}</span><span class="text-muted">${im.protein}P / ${im.carbs}C / ${im.fat}F</span><span class="text-accent">${Math.round(im.calories)} kcal</span></div>`;
+    }).join('');
+    return `<div class="meal-card"><div class="meal-card-header"><span class="meal-card-title">${meal.name}</span><div style="display:flex;gap:.4rem"><button class="btn btn-sm btn-ghost" onclick="editMealEntry(${idx})" title="Edit">✏️</button><button class="btn btn-sm btn-ghost" onclick="deleteMealEntry(${idx})" title="Delete">🗑</button></div></div>${rows}<div class="meal-item-row" style="font-weight:600;border-top:1px solid var(--border);margin-top:.4rem;padding-top:.4rem"><span>Total</span><span>${m.protein.toFixed(1)}P / ${m.carbs.toFixed(1)}C / ${m.fat.toFixed(1)}F</span><span class="text-accent">${Math.round(m.calories)} kcal</span></div></div>`;
+  }).join('');
+}
+
+// ─── Add meal modal ───────────────────────────
+function openAddMealModal() {
+  _editingLogIdx = null;
+  amSelectedItems = [];
+  document.getElementById('am-meal-name').value = '';
+  document.getElementById('am-search').value = '';
+  // Reset modal title + button text in case we just came from edit mode
+  const modal = document.getElementById('modal-add-meal');
+  modal.querySelector('h3').textContent = 'Add a Meal';
+  const saveBtn = modal.querySelector('button.btn-primary.btn-full');
+  if (saveBtn) saveBtn.textContent = 'Save Meal';
+  renderFoodList('am-food-list', 'am');
+  renderSelected('am');
+  openModal('modal-add-meal');
+}
+
+// Open Add Meal modal in EDIT mode for an existing logged meal
+function editMealEntry(idx) {
+  const meal = todayLog.meals?.[idx];
+  if (!meal) return;
+  _editingLogIdx = idx;
+  // Deep copy items so editing doesn't mutate the saved meal until user saves
+  amSelectedItems = meal.items.map(it => ({ foodId: it.foodId, qty: it.qty }));
+  document.getElementById('am-meal-name').value = meal.name || '';
+  document.getElementById('am-search').value = '';
+  // Update modal UI to indicate edit mode
+  const modal = document.getElementById('modal-add-meal');
+  modal.querySelector('h3').textContent = 'Edit Meal';
+  const saveBtn = modal.querySelector('button.btn-primary.btn-full');
+  if (saveBtn) saveBtn.textContent = 'Update Meal';
+  renderFoodList('am-food-list', 'am');
+  renderSelected('am');
+  openModal('modal-add-meal');
+}
+function filterFoods(q) { renderFoodList('am-food-list', 'am', q); }
+function filterFoodsCM(q) { renderFoodList('cm-food-list', 'cm', q); }
+
+function renderFoodList(listId, prefix, q='') {
+  const query = q.trim().toLowerCase();
+  let results;
+  if (query) {
+    // Smart ranking: exact match → starts-with → contains
+    const matches = FOOD_DB.filter(f => f && typeof f.name === 'string' && f.name.toLowerCase().includes(query));
+    matches.sort((a, b) => {
+      const an = a.name.toLowerCase(), bn = b.name.toLowerCase();
+      const aExact = an === query, bExact = bn === query;
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+      const aStarts = an.startsWith(query), bStarts = bn.startsWith(query);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return an.localeCompare(bn);
+    });
+    results = matches;
+  } else {
+    results = FOOD_DB.filter(f => f && typeof f.name === 'string');
+  }
+  const el = document.getElementById(listId);
+  if (results.length === 0) {
+    el.innerHTML = `<div class="food-empty">No matches in your library. Try the web search below.</div>`;
+    return;
+  }
+  // Cap to 30 only when browsing; show all when searching (so a 35th match isn't hidden)
+  const slice = query ? results : results.slice(0, 30);
+  el.innerHTML = slice.map(f => {
+    const src = f.source;
+    const isWeb = src === 'web';
+    const isGlobal = src === 'global';
+    const isCustom = src === 'custom';
+    let badge = '';
+    if (isWeb) badge = '<span style="font-size:.65rem;color:#6a9fb5;font-weight:400;margin-left:.3rem;">· web</span>';
+    else if (isGlobal) badge = '<span style="font-size:.65rem;color:var(--accent);font-weight:400;margin-left:.3rem;">· global</span>';
+    else if (isCustom) badge = '<span style="font-size:.65rem;color:var(--warn);font-weight:400;margin-left:.3rem;">· yours</span>';
+    const canDelete = (isGlobal && isAdmin()) || isCustom;
+    const deleteBtn = canDelete
+      ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteCustomFood(${f.id})" style="padding:.2rem .4rem;font-size:.85rem;color:var(--danger);" title="Delete">🗑</button>`
+      : '';
+    return `<div class="food-item ${isWeb ? 'web-source' : ''}" onclick="addFoodToSelection(${f.id},'${prefix}')">
+      <div style="flex:1;min-width:0;">
+        <div class="fi-name">${escapeHtml(f.name)}${badge}</div>
+        <div class="fi-meta">${escapeHtml(f.serving)} · ${f.protein}P · ${f.carbs}C · ${f.fat}F</div>
+      </div>
+      <div class="fi-cal">${Math.round(f.calories)} kcal</div>
+      ${deleteBtn}
+      <div class="fi-add">+</div>
+    </div>`;
+  }).join('');
+  // Snap scroll back to top so the best match is visible
+  el.scrollTop = 0;
+}
+
+// Escape HTML to prevent injection from web-search results
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function addFoodToSelection(foodId, prefix) {
+  const list = prefix === 'am' ? amSelectedItems : cmSelectedItems;
+  const ex = list.find(i => i.foodId === foodId);
+  if (ex) { ex.qty = +(ex.qty + 1).toFixed(1); }
+  else { list.push({ foodId, qty: 1 }); }
+  renderSelected(prefix);
+  toast('Added ✓');
+}
+
+function renderSelected(prefix) {
+  const list = prefix === 'am' ? amSelectedItems : cmSelectedItems;
+  const wrap = document.getElementById(`${prefix}-selected-wrap`);
+  const el = document.getElementById(`${prefix}-selected`);
+  const countEl = document.getElementById(`${prefix}-selected-count`);
+  const totalEl = document.getElementById(`${prefix}-running-total`);
+  if (!list.length) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  countEl.textContent = list.length;
+  const tot = sumMacros(list);
+  totalEl.textContent = `${Math.round(tot.calories)} kcal · ${tot.protein.toFixed(0)}P / ${tot.carbs.toFixed(0)}C / ${tot.fat.toFixed(0)}F`;
+  el.innerHTML = list.map((item, idx) => {
+    const f = FOOD_DB.find(x => x.id === item.foodId);
+    if (!f) return '';
+    const m = macrosFor(item.foodId, item.qty);
+    return `<div class="selected-row">
+      <div class="sr-name">${escapeHtml(f.name)}<span class="sr-serving">${escapeHtml(f.serving)}</span></div>
+      <input type="number" class="sr-qty" value="${item.qty}" min="0.25" step="0.25" onchange="updateQty(${idx},'${prefix}',this.value)" onclick="event.stopPropagation()"/>
+      <span class="sr-cal">${Math.round(m.calories)} kcal</span>
+      <button class="btn btn-ghost btn-sm sr-del" onclick="removeItem(${idx},'${prefix}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function updateQty(idx, prefix, val) {
+  const list = prefix === 'am' ? amSelectedItems : cmSelectedItems;
+  list[idx].qty = Math.max(0.25, +val || 0.25);
+  renderSelected(prefix);
+}
+function removeItem(idx, prefix) {
+  const list = prefix === 'am' ? amSelectedItems : cmSelectedItems;
+  list.splice(idx, 1);
+  renderSelected(prefix);
+}
+
+// ─── Open Food Facts (web ingredient search) ──
+// Free public API, CORS-enabled, no API key required.
+// Docs: https://wiki.openfoodfacts.org/API/Read/Search
+async function searchOpenFoodFacts(prefix) {
+  const q = document.getElementById(`${prefix}-search`).value.trim();
+  if (!q) { toast('Type something to search'); return; }
+  const listId = `${prefix}-food-list`;
+  const el = document.getElementById(listId);
+  el.innerHTML = `<div class="web-loading">Searching the web for "${escapeHtml(q)}"…</div>`;
+  try {
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=10&fields=product_name,nutriments,serving_size,brands`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('Search failed');
+    const data = await resp.json();
+    const products = (data.products || []).filter(p => p.product_name && p.nutriments && (p.nutriments['energy-kcal_100g'] || p.nutriments['energy-kcal_serving']));
+    if (products.length === 0) {
+      el.innerHTML = `<div class="food-empty">No web results for "${escapeHtml(q)}". Try a different spelling.</div>`;
+      return;
+    }
+    // Render web results with a button to add them into our local DB
+    el.innerHTML = products.slice(0, 10).map((p, i) => {
+      const n = p.nutriments;
+      // Open Food Facts uses per-100g values primarily; fall back to per-serving.
+      const protein = +(n.proteins_100g || n.proteins_serving || 0).toFixed(2);
+      const carbs   = +(n.carbohydrates_100g || n.carbohydrates_serving || 0).toFixed(2);
+      const fat     = +(n.fat_100g || n.fat_serving || 0).toFixed(2);
+      const cal     = +(n['energy-kcal_100g'] || n['energy-kcal_serving'] || 0).toFixed(2);
+      const sugar   = +(n.sugars_100g || n.sugars_serving || 0).toFixed(2);
+      const satFat  = +(n['saturated-fat_100g'] || n['saturated-fat_serving'] || 0).toFixed(2);
+      const serving = p.serving_size || '100g';
+      const brand   = p.brands ? ` · ${p.brands}` : '';
+      const displayName = p.product_name + brand;
+      // We stash a temporary id starting at 1000 + something unique
+      return `<div class="food-item web-source" onclick="addWebFoodToSelection(${i},'${prefix}')" data-web-idx="${i}">
+        <div style="flex:1;min-width:0;">
+          <div class="fi-name">${escapeHtml(displayName.slice(0, 40))}</div>
+          <div class="fi-meta">${escapeHtml(serving)} · ${protein}P · ${carbs}C · ${fat}F</div>
+        </div>
+        <div class="fi-cal">${Math.round(cal)} kcal</div>
+        <div class="fi-add">+</div>
+      </div>`;
+    }).join('');
+    // Stash the parsed results so addWebFoodToSelection can pull them by index
+    _webResults[prefix] = products.slice(0, 10).map(p => {
+      const n = p.nutriments;
+      return {
+        name: ((p.product_name || 'Unknown') + (p.brands ? ' · ' + p.brands : '')).slice(0, 60),
+        serving: p.serving_size || '100g',
+        protein: +(n.proteins_100g || n.proteins_serving || 0).toFixed(2),
+        carbs:   +(n.carbohydrates_100g || n.carbohydrates_serving || 0).toFixed(2),
+        fat:     +(n.fat_100g || n.fat_serving || 0).toFixed(2),
+        sugar:   +(n.sugars_100g || n.sugars_serving || 0).toFixed(2),
+        satFat:  +(n['saturated-fat_100g'] || n['saturated-fat_serving'] || 0).toFixed(2),
+        calories:+(n['energy-kcal_100g'] || n['energy-kcal_serving'] || 0).toFixed(2),
+      };
+    });
+  } catch (e) {
+    el.innerHTML = `<div class="food-empty">Web search failed (${escapeHtml(e.message || 'network error')}). Check connection.</div>`;
+  }
+}
+
+// Cache for web search results between renders (keyed by prefix: 'am' or 'cm')
+const _webResults = { am: [], cm: [] };
+let _nextWebFoodId = 10000; // Web-sourced items get high ids to never collide with local DB
+
+// User taps a web result — add it to FOOD_DB permanently and into the current selection.
+function addWebFoodToSelection(webIdx, prefix) {
+  const wp = (_webResults[prefix] || [])[webIdx];
+  if (!wp) return;
+  // Check if we already imported this web item (by name) — reuse instead of duplicating
+  let existing = FOOD_DB.find(f => f.name === wp.name && f.source === 'web');
+  if (!existing) {
+    existing = { id: _nextWebFoodId++, name: wp.name, serving: wp.serving, protein: wp.protein, carbs: wp.carbs, fat: wp.fat, sugar: wp.sugar, satFat: wp.satFat, calories: wp.calories, source: 'web' };
+    FOOD_DB.push(existing);
+    // Persist user's web-imported foods so they show up next session
+    const stored = localGet('web_foods') || [];
+    stored.push(existing);
+    localSet('web_foods', stored);
+  }
+  addFoodToSelection(existing.id, prefix);
+}
+
+// On boot, restore web-imported foods from localStorage so they're searchable
+(function restoreWebFoods() {
+  try {
+    const stored = localGet('web_foods') || [];
+    stored.forEach(f => {
+      if (!FOOD_DB.find(x => x.id === f.id)) FOOD_DB.push(f);
+      if (f.id >= _nextWebFoodId) _nextWebFoodId = f.id + 1;
+    });
+  } catch(e) {}
+})();
+
+async function saveMealEntry() {
+  const name = document.getElementById('am-meal-name').value.trim() || 'Meal';
+  if (!amSelectedItems.length) { toast('Add at least one ingredient'); return; }
+  const date = document.getElementById('log-date').value || todayStr();
+  if (!todayLog.meals) todayLog.meals = [];
+  if (_editingLogIdx !== null && todayLog.meals[_editingLogIdx]) {
+    // Update in place — preserve original time
+    const orig = todayLog.meals[_editingLogIdx];
+    todayLog.meals[_editingLogIdx] = { name, items: [...amSelectedItems], time: orig.time || Date.now() };
+  } else {
+    todayLog.meals.push({ name, items: [...amSelectedItems], time: Date.now() });
+  }
+  const wasEditing = _editingLogIdx !== null;
+  _editingLogIdx = null;
+  await Db.saveLog(currentUser?.uid || 'local', date, todayLog);
+  if (date === homeDate) await loadHomeLog();
+  closeModal('modal-add-meal');
+  renderLogPage();
+  renderHome();
+  toast(wasEditing ? 'Meal updated ✓' : 'Meal logged ✓');
+}
+
+async function deleteMealEntry(idx) {
+  todayLog.meals.splice(idx, 1);
+  const date = document.getElementById('log-date').value || todayStr();
+  await Db.saveLog(currentUser?.uid || 'local', date, todayLog);
+  if (date === homeDate) await loadHomeLog();
+  renderLogPage();
+  renderHome();
+  toast('Removed');
+}
+
+// ─── Meals page ───────────────────────────────
+function renderMeals() {
+  document.getElementById('preset-meals-list').innerHTML = PRESET_MEALS.map(pm=>{
+    const m=sumMacros(pm.items);
+    return `<div class="meal-card mb-1"><div class="flex-between mb-1"><span style="font-weight:600">${pm.name}</span><button class="btn btn-sm btn-primary" onclick="logPresetMeal(${JSON.stringify(pm).replace(/"/g,'&quot;')})">Log</button></div><div class="macro-row"><div class="macro-pill p"><span class="val" style="font-size:.85rem">${m.protein.toFixed(1)}</span><span class="lbl">P</span></div><div class="macro-pill c"><span class="val" style="font-size:.85rem">${m.carbs.toFixed(1)}</span><span class="lbl">C</span></div><div class="macro-pill f"><span class="val" style="font-size:.85rem">${m.fat.toFixed(1)}</span><span class="lbl">F</span></div><div class="macro-pill k"><span class="val" style="font-size:.85rem">${Math.round(m.calories)}</span><span class="lbl">kcal</span></div></div></div>`;
+  }).join('');
+  const sl = document.getElementById('saved-meals-list');
+  if (!savedMeals.length) { sl.innerHTML = '<p class="empty-state">No saved meals yet.</p>'; return; }
+  sl.innerHTML = savedMeals.map(sm=>{
+    const m=sumMacros(sm.items);
+    return `<div class="meal-card mb-1"><div class="flex-between mb-1"><span style="font-weight:600">${sm.name}</span><div style="display:flex;gap:.4rem"><button class="btn btn-sm btn-secondary" onclick="logSavedMeal('${sm.id}')">Log</button><button class="btn btn-sm btn-ghost" onclick="deleteCustomMeal('${sm.id}')">🗑</button></div></div><div class="macro-row"><div class="macro-pill p"><span class="val" style="font-size:.85rem">${m.protein.toFixed(1)}</span><span class="lbl">P</span></div><div class="macro-pill c"><span class="val" style="font-size:.85rem">${m.carbs.toFixed(1)}</span><span class="lbl">C</span></div><div class="macro-pill f"><span class="val" style="font-size:.85rem">${m.fat.toFixed(1)}</span><span class="lbl">F</span></div><div class="macro-pill k"><span class="val" style="font-size:.85rem">${Math.round(m.calories)}</span><span class="lbl">kcal</span></div></div></div>`;
+  }).join('');
+}
+async function logPresetMeal(pm) {
+  const date = todayStr();
+  if (!todayLog.meals) todayLog.meals=[];
+  todayLog.meals.push({name:pm.name, items:pm.items, time:Date.now()});
+  await Db.saveLog(currentUser?.uid||'local', date, todayLog);
+  if (date === homeDate) await loadHomeLog();
+  renderLogPage();
+  renderHome();
+  toast(`${pm.name} logged ✓`);
+}
+async function logSavedMeal(id) {
+  const sm = savedMeals.find(m=>m.id===id);
+  if (!sm) return;
+  await logPresetMeal(sm);
+}
+function openCreateMealModal() {
+  editingMealId = null;
+  cmSelectedItems = [];
+  document.getElementById('cm-name').value = '';
+  document.getElementById('cm-search').value = '';
+  document.getElementById('cm-title').textContent = 'Create Saved Meal';
+  renderFoodList('cm-food-list', 'cm');
+  renderSelected('cm');
+  openModal('modal-create-meal');
+}
+async function saveCustomMeal() {
+  const name = document.getElementById('cm-name').value.trim();
+  if (!name) { toast('Enter a meal name'); return; }
+  if (!cmSelectedItems.length) { toast('Add at least one food'); return; }
+  const uid = currentUser?.uid||'local';
+  const meal = { id: editingMealId || `m_${Date.now()}`, name, items:[...cmSelectedItems] };
+  await Db.saveMeal(uid, meal);
+  savedMeals = await Db.getMeals(uid);
+  renderMeals();
+  closeModal('modal-create-meal');
+  toast('Meal saved ✓');
+}
+async function deleteCustomMeal(id) {
+  await Db.deleteMeal(currentUser?.uid||'local', id);
+  savedMeals = savedMeals.filter(m=>m.id!==id);
+  renderMeals();
+  toast('Deleted');
+}
+
+// ─── Profile ──────────────────────────────────
+function renderProfile() {
+  if (!userProfile) return;
+  const p=userProfile; const t=p.targets;
+  const u = p.units || 'metric';
+  // Weight-specific unit (independent of overall units, for LBM display per user request)
+  const weightUnit = p.units || 'metric';
+  document.getElementById('pf-height').textContent = fmtHeight(p.height, u);
+  document.getElementById('pf-weight').textContent = fmtWeight(p.weight, weightUnit);
+  document.getElementById('pf-bmi').textContent    = p.bmi;
+  document.getElementById('pf-fat').textContent    = `${p.fat}%`;
+  document.getElementById('pf-lbm').textContent    = fmtWeight(p.lbm, weightUnit);
+  document.getElementById('pf-cal').textContent    = t.calories;
+  document.getElementById('pf-tp').textContent     = t.protein;
+  document.getElementById('pf-tc').textContent     = t.carbs;
+  document.getElementById('pf-tf').textContent     = t.fat;
+  document.getElementById('pf-tk').textContent     = t.calories;
+  // Labels follow respective field choices
+  const heightLbl = (p.fieldUnits?.height === 'ftin') ? 'Height (ft·in)' : 'Height (cm)';
+  const weightLbl = weightUnit === 'imperial' ? 'Weight (lb)' : 'Weight (kg)';
+  const lbmLbl    = weightUnit === 'imperial' ? 'LBM (lb)'    : 'LBM (kg)';
+  document.getElementById('pf-height-lbl').textContent = heightLbl;
+  document.getElementById('pf-weight-lbl').textContent = weightLbl;
+  document.getElementById('pf-lbm-lbl').textContent    = lbmLbl;
+  // Register/update profile pickers
+  registerPicker('pf-units-sel', { label:'Units', current:u, options:[
+    {value:'metric',  label:'Metric (cm, kg)'},
+    {value:'imperial',label:'Imperial (ft·in, lb)'}
+  ], onChange: v => updateUnits(v) });
+  registerPicker('pf-goal-sel', { label:'Goal', current:p.goal, options:[
+    {value:'cut',     label:'Cut (lose fat)'},
+    {value:'maintain',label:'Maintain'},
+    {value:'bulk',    label:'Bulk'}
+  ], onChange: v => updateGoal(v) });
+  registerPicker('pf-diet-sel', { label:'Diet Preference', current:p.diet, options:[
+    {value:'veg',   label:'Vegetarian'},
+    {value:'egg',   label:'Eggetarian'},
+    {value:'nonveg',label:'Non-Vegetarian'}
+  ], onChange: v => updateDiet(v) });
+}
+async function updateUnits(val) {
+  if (val !== 'metric' && val !== 'imperial') return;
+  userProfile.units = val;
+  await Db.saveProfile(currentUser?.uid||'local', userProfile);
+  renderProfile();
+  renderHome();
+  toast('Units updated');
+}
+// ─── Trends / Charts ──────────────────────────
+let _chartCal, _chartMacros, _chartWeight;
+const CHART_COLORS = { protein:'#5cb8b2', carbs:'#f0a05a', fat:'#e05c5c', accent:'#c8f06e', muted:'#7a8399', border:'#2a3044' };
+
+// Load last N days of logs and return [{date, calories, protein, carbs, fat}]
+async function loadRecentLogs(days = 7) {
+  const uid = currentUser?.uid || 'local';
+  const out = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const ds = d.toISOString().split('T')[0];
+    const log = await Db.getLog(uid, ds);
+    const meals = log?.meals || [];
+    const t = meals.reduce((a, m) => {
+      const s = sumMacros(m.items);
+      a.calories += s.calories; a.protein += s.protein; a.carbs += s.carbs; a.fat += s.fat;
+      return a;
+    }, { calories:0, protein:0, carbs:0, fat:0 });
+    out.push({ date: ds, label: d.toLocaleDateString('en-IN', {month:'short', day:'numeric'}), ...t });
+  }
+  return out;
+}
+
+async function renderTrends() {
+  if (typeof Chart === 'undefined') { console.warn('Chart.js not loaded'); return; }
+  const days = await loadRecentLogs(7);
+  const goal = userProfile?.targets?.calories || 2000;
+
+  // Calorie trend
+  if (_chartCal) _chartCal.destroy();
+  _chartCal = new Chart(document.getElementById('chart-calories'), {
+    type: 'line',
+    data: {
+      labels: days.map(d => d.label),
+      datasets: [
+        { label:'Calories', data: days.map(d => Math.round(d.calories)), borderColor: CHART_COLORS.accent, backgroundColor: 'rgba(200,240,110,.12)', fill:true, tension:.3, pointRadius:4, pointBackgroundColor: CHART_COLORS.accent },
+        { label:'Goal', data: days.map(() => goal), borderColor: CHART_COLORS.muted, borderDash:[5,5], pointRadius:0, fill:false }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#eef0f5',font:{size:11}}}}, scales:{ x:{ticks:{color:CHART_COLORS.muted},grid:{color:CHART_COLORS.border}}, y:{ticks:{color:CHART_COLORS.muted},grid:{color:CHART_COLORS.border},beginAtZero:true} } }
+  });
+
+  // Today's macro split
+  const today = days[days.length - 1];
+  if (_chartMacros) _chartMacros.destroy();
+  const hasData = today.protein + today.carbs + today.fat > 0;
+  _chartMacros = new Chart(document.getElementById('chart-macros'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Protein (g)', 'Carbs (g)', 'Fat (g)'],
+      datasets: [{ data: hasData ? [today.protein, today.carbs, today.fat] : [1,1,1], backgroundColor: [CHART_COLORS.protein, CHART_COLORS.carbs, CHART_COLORS.fat], borderColor:'#181c24', borderWidth:2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom', labels:{color:'#eef0f5',font:{size:11},padding:10}}, tooltip: hasData ? {} : { callbacks: { label: () => 'No data yet' } } } }
+  });
+
+  // Weight trend
+  const weights = (userProfile?.weights || []).slice().sort((a,b) => a.date.localeCompare(b.date));
+  if (_chartWeight) _chartWeight.destroy();
+  if (weights.length === 0) {
+    document.getElementById('weight-empty').style.display = 'block';
+    document.getElementById('chart-weight').style.display = 'none';
+  } else {
+    document.getElementById('weight-empty').style.display = 'none';
+    document.getElementById('chart-weight').style.display = '';
+    const isLb = (userProfile?.units === 'imperial');
+    const data = weights.map(w => isLb ? +kgToLbs(w.kg).toFixed(1) : w.kg);
+    _chartWeight = new Chart(document.getElementById('chart-weight'), {
+      type: 'line',
+      data: { labels: weights.map(w => w.date.slice(5)), datasets: [{ label: isLb ? 'Weight (lb)' : 'Weight (kg)', data, borderColor: CHART_COLORS.protein, backgroundColor:'rgba(92,184,178,.12)', fill:true, tension:.3, pointRadius:4 }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#eef0f5',font:{size:11}}}}, scales:{ x:{ticks:{color:CHART_COLORS.muted},grid:{color:CHART_COLORS.border}}, y:{ticks:{color:CHART_COLORS.muted},grid:{color:CHART_COLORS.border}} } }
+    });
+  }
+}
+
+// ─── Weight log ───────────────────────────────
+function openLogWeight() {
+  const isLb = (userProfile?.units === 'imperial');
+  document.getElementById('lw-weight-label').textContent = isLb ? 'Weight (lb)' : 'Weight (kg)';
+  document.getElementById('lw-date').value = todayStr();
+  document.getElementById('lw-weight').value = isLb && userProfile?.weight ? kgToLbs(userProfile.weight).toFixed(1) : (userProfile?.weight || '');
+  openModal('modal-log-weight');
+}
+async function saveLogWeight() {
+  const date = document.getElementById('lw-date').value || todayStr();
+  const val = +document.getElementById('lw-weight').value;
+  if (!val) { toast('Enter a weight'); return; }
+  const isLb = (userProfile?.units === 'imperial');
+  const kg = isLb ? lbsToKg(val) : val;
+  if (!userProfile.weights) userProfile.weights = [];
+  userProfile.weights = userProfile.weights.filter(w => w.date !== date);
+  userProfile.weights.push({ date, kg: +kg.toFixed(2) });
+  const sorted = userProfile.weights.slice().sort((a,b) => b.date.localeCompare(a.date));
+  userProfile.weight = sorted[0].kg;
+  userProfile.bmi = calcBMI(userProfile.height, userProfile.weight);
+  userProfile.lbm = +(userProfile.weight*(1-userProfile.fat/100)).toFixed(1);
+  userProfile.targets = calcTargets(userProfile);
+  await Db.saveProfile(currentUser?.uid || 'local', userProfile);
+  closeModal('modal-log-weight');
+  renderTrends();
+  renderProfile();
+  renderHome();
+  toast('Weight logged ✓');
+}
+
+// ─── Voice logging ────────────────────────────
+let _voiceRec = null;
+let _voicePrefix = 'am';            // which modal opened voice
+let _voiceFinalTranscript = '';     // accumulates final results across the session
+let _voiceLastProcessed = '';       // tracks what we already processed to avoid double-add
+
+const NUMBER_WORDS = {
+  one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10,
+  half:0.5, quarter:0.25, double:2, dozen:12,
+  // Hindi/Hinglish digits commonly heard
+  ek:1, do:2, teen:3, char:4, paanch:5, chai:5, cha:5, paach:5,
+  // Speech-recognition mishears for short numbers
+  to:2, too:2, tu:2, won:1, wun:1, fore:4, ate:8, sex:6, force:4
+};
+
+// Common food aliases / phonetic mishears → canonical FOOD_DB names.
+// Add entries here as you notice the recognizer mangling specific words.
+const FOOD_ALIASES = {
+  // Breads & rotis
+  'roti': 'Roti', 'rotis': 'Roti', 'rooti': 'Roti', 'route': 'Roti', 'roty': 'Roti',
+  'chapati': 'Roti', 'chapatis': 'Roti', 'chapathi': 'Roti',
+  'fulka': 'Roti', 'phulka': 'Roti',
+  'paratha': 'Paratha', 'parathas': 'Paratha', 'paranthi': 'Paratha', 'parantha': 'Paratha',
+  'jowar': 'Jowar Roti', 'jawar': 'Jowar Roti', 'jowar roti': 'Jowar Roti',
+  'bread': 'Bread', 'slice': 'Bread', 'toast': 'Bread',
+  // Dals & legumes
+  'dal': 'Dal', 'dahl': 'Dal', 'daal': 'Dal', 'the all': 'Dal', 'doll': 'Dal',
+  'masoor': 'Masoor Dal', 'masoor dal': 'Masoor Dal',
+  'rajma': 'Rajma', 'razma': 'Rajma',
+  'chana': 'Chana', 'chhana': 'Chana', 'chickpea': 'Chana', 'chickpeas': 'Chana',
+  // Dairy
+  'paneer': 'Paneer', 'panir': 'Paneer', 'panner': 'Paneer', 'pani': 'Paneer',
+  'curd': 'Curd', 'dahi': 'Curd', 'yogurt': 'Curd', 'yoghurt': 'Curd',
+  'milk': 'Milk', 'doodh': 'Milk', 'dudh': 'Milk',
+  'cheese': 'Cheese Slice', 'cheese slice': 'Cheese Slice',
+  'greek yogurt': 'Greek Yogurt', 'greek': 'Greek Yogurt',
+  'butter': 'Butter', 'makkhan': 'Butter',
+  'ghee': 'Ghee',
+  // Eggs
+  'egg': 'Eggs', 'eggs': 'Eggs', 'anda': 'Eggs', 'ande': 'Eggs',
+  'egg white': 'Egg White', 'whites': 'Egg White',
+  // Grains
+  'rice': 'Rice', 'chawal': 'Rice', 'chaval': 'Rice',
+  'oats': 'Oats', 'oat': 'Oats',
+  'poha': 'Poha',
+  // Veg
+  'aloo': 'Aloo Sabzi', 'aloo sabzi': 'Aloo Sabzi', 'potato sabzi': 'Aloo Sabzi',
+  'salad': 'Veg Salad', 'veg salad': 'Veg Salad',
+  'matar': 'Matar Mushroom', 'matar mushroom': 'Matar Mushroom', 'mushroom': 'Matar Mushroom',
+  'ghiya': 'Ghiya Sabzi', 'lauki': 'Ghiya Sabzi', 'gourd': 'Ghiya Sabzi',
+  // Fruit
+  'banana': 'Banana', 'kela': 'Banana',
+  'apple': 'Apple', 'seb': 'Apple',
+  // Nuts
+  'almond': 'Almonds', 'almonds': 'Almonds', 'badam': 'Almonds',
+  'peanut': 'Peanuts', 'peanuts': 'Peanuts', 'moongphali': 'Peanuts',
+  'peanut butter': 'Peanut Butter',
+  // Other
+  'whey': 'Whey Protein', 'whey protein': 'Whey Protein', 'protein shake': 'Whey Protein',
+  'macaroni': 'Macaroni', 'pasta': 'Macaroni',
+  'muesli': 'Muscleblaze Muesli',
+  'nutrella': 'Nutrella', 'soya': 'Nutrella'
+};
+
+function parseVoiceInput(text) {
+  // Normalize: lowercase, replace separators
+  const norm = text.toLowerCase()
+    .replace(/[.!?]/g, ',')
+    .replace(/\sand\s/g, ', ')
+    .replace(/\sthen\s/g, ', ')
+    .replace(/\splus\s/g, ', ')
+    .replace(/\swith\s/g, ', ')
+    .replace(/\s+/g, ' ');
+  const phrases = norm.split(/[,;]/).map(p => p.trim()).filter(Boolean);
+  const matches = [];
+  for (const phrase of phrases) {
+    let qty = 1;
+    let rest = phrase;
+    // Numeric prefix
+    const numMatch = phrase.match(/^(\d+(?:\.\d+)?)\s+(.+)/);
+    const wordRe = new RegExp('^(' + Object.keys(NUMBER_WORDS).join('|') + ')\\s+(.+)');
+    const wordMatch = phrase.match(wordRe);
+    if (numMatch) { qty = +numMatch[1]; rest = numMatch[2]; }
+    else if (wordMatch) { qty = NUMBER_WORDS[wordMatch[1]]; rest = wordMatch[2]; }
+    // Strip filler words and units
+    rest = rest.replace(/\b(of|a|an|some|the|piece|pieces|bowl|bowls|slice|slices|serving|servings|whole|cup|cups|gram|grams|gm|gms|kg|ml|spoon|spoons|tsp|tbsp|small|big|large|medium)\b/g, '').trim();
+    rest = rest.replace(/\s+/g, ' ');
+    if (!rest) continue;
+    const food = findFoodFuzzy(rest);
+    if (food) matches.push({ foodId: food.id, qty, name: food.name, heard: rest });
+    else matches.push({ foodId: null, qty, name: rest, heard: rest });
+  }
+  return matches;
+}
+
+function findFoodFuzzy(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) return null;
+  // 1. Alias map check (handles mishears + Hinglish)
+  if (FOOD_ALIASES[q]) {
+    const f = FOOD_DB.find(x => x.name === FOOD_ALIASES[q]);
+    if (f) return f;
+  }
+  // 2. Singularize and recheck alias
+  const singular = q.replace(/s$/, '');
+  if (FOOD_ALIASES[singular]) {
+    const f = FOOD_DB.find(x => x.name === FOOD_ALIASES[singular]);
+    if (f) return f;
+  }
+  // 3. Exact name match
+  let found = FOOD_DB.find(f => f.name.toLowerCase() === q || f.name.toLowerCase() === singular);
+  if (found) return found;
+  // 4. Substring match either direction
+  found = FOOD_DB.find(f => {
+    const fn = f.name.toLowerCase();
+    return fn.includes(q) || q.includes(fn) || fn.includes(singular) || singular.includes(fn);
+  });
+  if (found) return found;
+  // 5. Word-by-word: any word in query matches any FOOD_DB word
+  const queryWords = q.split(' ').filter(w => w.length > 2);
+  for (const word of queryWords) {
+    if (FOOD_ALIASES[word]) {
+      const f = FOOD_DB.find(x => x.name === FOOD_ALIASES[word]);
+      if (f) return f;
+    }
+    found = FOOD_DB.find(f => f.name.toLowerCase().split(' ').some(fw => fw === word || fw.includes(word) || word.includes(fw)));
+    if (found) return found;
+  }
+  return null;
+}
+
+function startVoiceLog() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    toast('Voice input not supported in this browser. Try Chrome.');
+    return;
+  }
+  // Determine which modal triggered voice (am or cm)
+  _voicePrefix = document.getElementById('modal-create-meal').classList.contains('open') ? 'cm' : 'am';
+  _voiceFinalTranscript = '';
+  _voiceLastProcessed = '';
+  document.getElementById('voice-heard').innerHTML = '<span style="color:var(--muted);font-style:italic;">Waiting for speech…</span>';
+  document.getElementById('voice-status').textContent = '';
+  openModal('modal-voice');
+  _voiceRec = new SR();
+  _voiceRec.lang = 'en-IN';
+  _voiceRec.continuous = true;        // Keep listening until user taps Done
+  _voiceRec.interimResults = true;    // Show partial results live
+  _voiceRec.maxAlternatives = 1;
+
+  _voiceRec.onresult = (event) => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        _voiceFinalTranscript += transcript + ' ';
+      } else {
+        interim += transcript;
+      }
+    }
+    const heardEl = document.getElementById('voice-heard');
+    const display = (_voiceFinalTranscript + interim).trim();
+    heardEl.textContent = display || '…';
+    // Live preview of what would match
+    if (display) previewVoiceMatches(display);
+  };
+
+  _voiceRec.onerror = (e) => {
+    if (e.error === 'no-speech') {
+      document.getElementById('voice-status').textContent = 'No speech detected. Speak louder or closer to mic.';
+    } else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      document.getElementById('voice-status').textContent = 'Mic access denied. Check browser permissions.';
+    } else if (e.error === 'aborted') {
+      // Ignore — user closed
+    } else {
+      document.getElementById('voice-status').textContent = `Error: ${e.error}`;
+    }
+  };
+
+  _voiceRec.onend = () => {
+    // If still in modal and user didn't tap Done, restart (handles auto-stop after silence)
+    if (document.getElementById('modal-voice').classList.contains('open') && _voiceRec) {
+      try { _voiceRec.start(); } catch(_) {}
+    }
+  };
+
+  try {
+    _voiceRec.start();
+  } catch(e) {
+    toast('Could not start mic');
+    closeModal('modal-voice');
+  }
+}
+
+function previewVoiceMatches(text) {
+  const matches = parseVoiceInput(text);
+  const matched = matches.filter(m => m.foodId);
+  const unmatched = matches.filter(m => !m.foodId);
+  let s = '';
+  if (matched.length) s += `✓ ${matched.map(m => `${m.qty}× ${m.name}`).join(', ')}`;
+  if (unmatched.length) s += (s ? ' · ' : '') + `? ${unmatched.map(m => m.name).join(', ')}`;
+  document.getElementById('voice-status').textContent = s;
+}
+
+function stopVoiceLog(commit) {
+  if (_voiceRec) {
+    _voiceRec.onend = null;     // Prevent the auto-restart in onend
+    try { _voiceRec.stop(); } catch(_) {}
+    _voiceRec = null;
+  }
+  if (commit) {
+    const text = (_voiceFinalTranscript || document.getElementById('voice-heard').textContent || '').trim();
+    if (text && text !== '…') processVoiceTranscript(text);
+    else toast('Nothing heard');
+  }
+  closeModal('modal-voice');
+}
+
+function processVoiceTranscript(transcript) {
+  const matches = parseVoiceInput(transcript);
+  const matched = matches.filter(m => m.foodId);
+  const unmatched = matches.filter(m => !m.foodId);
+  if (matched.length === 0) {
+    toast(unmatched.length ? `Couldn't match: ${unmatched.map(m=>m.name).join(', ')}` : 'No ingredients detected');
+    return;
+  }
+  const list = _voicePrefix === 'cm' ? cmSelectedItems : amSelectedItems;
+  matched.forEach(m => {
+    const ex = list.find(i => i.foodId === m.foodId);
+    if (ex) ex.qty = +(ex.qty + m.qty).toFixed(2);
+    else list.push({ foodId: m.foodId, qty: m.qty });
+  });
+  renderSelected(_voicePrefix);
+  let msg = `Added ${matched.length} item${matched.length > 1 ? 's' : ''}`;
+  if (unmatched.length) msg += ` · skipped: ${unmatched.map(m=>m.name).join(', ')}`;
+  toast(msg);
+}
+
+// ─── Custom Ingredient ────────────────────────
+let _customIngPrefix = 'am';
+let _customNextId = 5000;   // Custom ingredients use 5000+ to never collide with FOOD_DB or web items
+
+(function restoreCustomIds() {
+  const stored = localGet('custom_foods') || [];
+  stored.forEach(f => { if (f.id >= _customNextId) _customNextId = f.id + 1; });
+})();
+
+function openCustomIngredient(prefix) {
+  _customIngPrefix = prefix;
+  // Pre-fill name with current search query if present
+  const searchVal = document.getElementById(`${prefix}-search`)?.value?.trim() || '';
+  document.getElementById('ci-name').value = searchVal;
+  document.getElementById('ci-serving').value = '';
+  document.getElementById('ci-cal').value = '';
+  document.getElementById('ci-protein').value = '';
+  document.getElementById('ci-carbs').value = '';
+  document.getElementById('ci-fat').value = '';
+  // Update modal heading + hint to show what scope this save will land in
+  const modal = document.getElementById('modal-custom-ing');
+  const heading = modal.querySelector('h3');
+  const hint = modal.querySelector('p.text-muted');
+  if (isAdmin()) {
+    heading.textContent = 'Add Global Ingredient';
+    hint.innerHTML = '<strong style="color:var(--accent);">Admin mode</strong> — this will be visible to ALL users. Enter macros for ONE serving.';
+  } else {
+    heading.textContent = 'Add Custom Ingredient';
+    hint.textContent = 'Saved to your private library. Enter macros for ONE serving.';
+  }
+  openModal('modal-custom-ing');
+}
+
+async function saveCustomIngredient() {
+  const name = document.getElementById('ci-name').value.trim();
+  const serving = document.getElementById('ci-serving').value.trim() || '1 serving';
+  const cal = +document.getElementById('ci-cal').value || 0;
+  const protein = +document.getElementById('ci-protein').value || 0;
+  const carbs = +document.getElementById('ci-carbs').value || 0;
+  const fat = +document.getElementById('ci-fat').value || 0;
+  if (!name) { toast('Enter a name'); return; }
+  if (cal === 0 && protein === 0 && carbs === 0 && fat === 0) {
+    toast('Enter at least one macro value');
+    return;
+  }
+  const food = {
+    id: _customNextId++,
+    name,
+    serving,
+    protein, carbs, fat,
+    sugar: 0,
+    satFat: 0,
+    calories: cal || (protein * 4 + carbs * 4 + fat * 9),  // auto-compute if not given
+    source: isAdmin() ? 'global' : 'custom',
+    addedBy: currentUser?.uid || 'local',
+    addedAt: Date.now()
+  };
+  // Push to in-memory FOOD_DB so it shows up immediately
+  FOOD_DB.push(food);
+  // Persist via Firestore (or localStorage if offline) — admin → globalFoods, others → users/{uid}/foods
+  try {
+    await Db.saveCustomFood(currentUser?.uid || 'local', food);
+  } catch (e) {
+    console.warn('[NutriLog] saveCustomFood failed, kept locally:', e);
+  }
+  // Also keep a localStorage copy so it survives offline next session
+  const localStored = localGet('custom_foods') || [];
+  localStored.push(food);
+  localSet('custom_foods', localStored);
+
+  addFoodToSelection(food.id, _customIngPrefix);
+  closeModal('modal-custom-ing');
+  toast(isAdmin() ? 'Global ingredient saved ✓' : 'Custom ingredient saved ✓');
+}
+
+// Admin-only: delete a global ingredient (or anyone can delete their own private ones)
+async function deleteCustomFood(foodId) {
+  const food = FOOD_DB.find(f => f.id === foodId);
+  if (!food) return;
+  const isGlobal = food.source === 'global';
+  // Permission check: admin can delete globals; everyone can delete their own privates.
+  if (isGlobal && !isAdmin()) { toast('Only admin can delete global ingredients'); return; }
+  if (!confirm(`Delete "${food.name}"? This ${isGlobal ? 'will affect all users' : 'is permanent'}.`)) return;
+  try {
+    await Db.deleteCustomFood(currentUser?.uid || 'local', foodId, isGlobal);
+  } catch (e) {
+    console.warn('[NutriLog] deleteCustomFood failed:', e);
+  }
+  // Remove from local array + localStorage
+  const idx = FOOD_DB.findIndex(f => f.id === foodId);
+  if (idx >= 0) FOOD_DB.splice(idx, 1);
+  const localStored = (localGet('custom_foods') || []).filter(f => f.id !== foodId);
+  localSet('custom_foods', localStored);
+  // Re-render currently visible food list if a search modal is open
+  ['am','cm'].forEach(p => {
+    const el = document.getElementById(`${p}-food-list`);
+    if (el && document.getElementById(`modal-${p === 'am' ? 'add' : 'create'}-meal`)?.classList.contains('open')) {
+      const q = document.getElementById(`${p}-search`).value;
+      renderFoodList(`${p}-food-list`, p, q);
+    }
+  });
+  toast('Deleted');
+}
+
+// Restore localStorage custom foods on boot (for offline resilience)
+(function restoreCustomFoods() {
+  try {
+    const stored = localGet('custom_foods') || [];
+    stored.forEach(f => {
+      if (!FOOD_DB.find(x => x.id === f.id)) FOOD_DB.push(f);
+    });
+  } catch(e) {}
+})();
+
+// Load Firestore-backed custom foods (global library + this user's private library)
+// Called from afterLogin() once we know who the user is.
+async function loadFirestoreFoods() {
+  if (!_db) return;
+  try {
+    const [globalFoods, privateFoods] = await Promise.all([
+      Db.getGlobalFoods(),
+      Db.getMyCustomFoods(currentUser?.uid || 'local')
+    ]);
+    [...globalFoods, ...privateFoods].forEach(f => {
+      // Skip malformed entries (no name, no id, etc.)
+      if (!f || typeof f.name !== 'string' || !f.name.trim() || typeof f.id !== 'number') {
+        console.warn('[NutriLog] skipping malformed food entry:', f);
+        return;
+      }
+      // Avoid duplicates (e.g. localStorage already restored same id)
+      const existing = FOOD_DB.findIndex(x => x.id === f.id);
+      if (existing >= 0) FOOD_DB[existing] = f;
+      else FOOD_DB.push(f);
+      if (f.id >= _customNextId) _customNextId = f.id + 1;
+    });
+  } catch (e) {
+    console.warn('[NutriLog] loadFirestoreFoods failed:', e);
+  }
+}
+
+
+async function updateGoal(val) {
+  userProfile.goal = val;
+  userProfile.targets = calcTargets(userProfile);
+  await Db.saveProfile(currentUser?.uid||'local', userProfile);
+  renderProfile();
+  renderHome();
+  toast('Goal updated');
+}
+async function updateDiet(val) {
+  userProfile.diet = val;
+  await Db.saveProfile(currentUser?.uid||'local', userProfile);
+  toast('Diet preference updated');
+}
+
+// ─── Reset / Start fresh ─────────────────────
+async function resetEverything() {
+  if (!confirm('Reset everything?\n\nThis wipes:\n• Your profile (height, weight, goals)\n• All meal logs\n• All saved meals\n• Weight history\n\nYour sign-in stays. You can re-onboard immediately.\n\nThis cannot be undone.')) return;
+  if (!confirm('Are you absolutely sure? This is permanent.')) return;
+  const uid = currentUser?.uid || 'local';
+  try {
+    if (_db && uid !== 'local') {
+      // Wipe Firestore: profile + logs + meals (private foods we keep — they're useful)
+      const batch = _db.batch();
+      batch.delete(_db.doc(`users/${uid}`));
+      // Best-effort delete of subcollections
+      const logs = await _db.collection(`users/${uid}/logs`).get();
+      logs.docs.forEach(d => batch.delete(d.ref));
+      const meals = await _db.collection(`users/${uid}/meals`).get();
+      meals.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+    // Wipe localStorage
+    Object.keys(localStorage).filter(k => k.startsWith('nl_')).forEach(k => localStorage.removeItem(k));
+    // Reset in-memory state
+    userProfile = null;
+    todayLog = { meals: [] };
+    savedMeals = [];
+    toast('Reset complete — re-onboarding…');
+    // Restart onboarding
+    setTimeout(() => {
+      buildStepIndicator();
+      currentStep = 1;
+      goStep(1);
+      showPage('onboard');
+      document.getElementById('main-nav').classList.remove('visible');
+    }, 600);
+  } catch (e) {
+    console.error('[NutriLog] reset failed:', e);
+    toast('Reset failed — check console');
+  }
+}
+function setEditUnits(units) {
+  if (units !== 'metric' && units !== 'imperial') return;
+  // Capture current edit-modal values in metric form
+  const heightCm = readEpHeightCm();
+  const weightKg = readEpWeightKg();
+  const neckCm   = readLengthCm(document.getElementById('ep-neck').value, _epUnits);
+  const waistCm  = readLengthCm(document.getElementById('ep-waist').value, _epUnits);
+  const hipCm    = readLengthCm(document.getElementById('ep-hip').value, _epUnits);
+
+  _epUnits = units;
+  document.querySelectorAll('#ep-unit-toggle button').forEach(b => b.classList.toggle('active', b.dataset.units === units));
+  document.getElementById('ep-metric-fields').style.display   = units === 'metric'   ? '' : 'none';
+  document.getElementById('ep-imperial-fields').style.display = units === 'imperial' ? '' : 'none';
+  const lenUnit = units === 'imperial' ? 'in' : 'cm';
+  document.getElementById('ep-neck-label').textContent  = `Neck (${lenUnit})`;
+  document.getElementById('ep-waist-label').textContent = `Waist (${lenUnit})`;
+  document.getElementById('ep-hip-label').textContent   = `Hip (${lenUnit})`;
+
+  if (units === 'metric') {
+    document.getElementById('ep-height-cm').value = heightCm ? heightCm.toFixed(1).replace(/\.0$/, '') : '';
+    document.getElementById('ep-weight-kg').value = weightKg ? weightKg.toFixed(1).replace(/\.0$/, '') : '';
+    document.getElementById('ep-neck').value  = neckCm  ? neckCm.toFixed(1).replace(/\.0$/, '')  : '';
+    document.getElementById('ep-waist').value = waistCm ? waistCm.toFixed(1).replace(/\.0$/, '') : '';
+    document.getElementById('ep-hip').value   = hipCm   ? hipCm.toFixed(1).replace(/\.0$/, '')   : '';
+  } else {
+    if (heightCm) {
+      const { ft, in: inches } = cmToFtIn(heightCm);
+      document.getElementById('ep-height-ft').value = ft;
+      document.getElementById('ep-height-in').value = inches;
+    } else {
+      document.getElementById('ep-height-ft').value = '';
+      document.getElementById('ep-height-in').value = '';
+    }
+    document.getElementById('ep-weight-lb').value = weightKg ? kgToLbs(weightKg).toFixed(1) : '';
+    document.getElementById('ep-neck').value  = neckCm  ? cmToInches(neckCm).toFixed(1)  : '';
+    document.getElementById('ep-waist').value = waistCm ? cmToInches(waistCm).toFixed(1) : '';
+    document.getElementById('ep-hip').value   = hipCm   ? cmToInches(hipCm).toFixed(1)   : '';
+  }
+}
+function readEpHeightCm() {
+  if (_epUnits === 'imperial') {
+    const ft = +document.getElementById('ep-height-ft').value || 0;
+    const inches = +document.getElementById('ep-height-in').value || 0;
+    if (!ft && !inches) return 0;
+    return ftInToCm(ft, inches);
+  }
+  return +document.getElementById('ep-height-cm').value || 0;
+}
+function readEpWeightKg() {
+  if (_epUnits === 'imperial') {
+    const lb = +document.getElementById('ep-weight-lb').value || 0;
+    return lb ? lbsToKg(lb) : 0;
+  }
+  return +document.getElementById('ep-weight-kg').value || 0;
+}
+function openEditProfile() {
+  const p = userProfile;
+  // Default modal units to user's saved preference
+  _epUnits = p.units === 'imperial' ? 'imperial' : 'metric';
+  // Set toggle button active state
+  document.querySelectorAll('#ep-unit-toggle button').forEach(b => b.classList.toggle('active', b.dataset.units === _epUnits));
+  // Show correct field group
+  document.getElementById('ep-metric-fields').style.display   = _epUnits === 'metric'   ? '' : 'none';
+  document.getElementById('ep-imperial-fields').style.display = _epUnits === 'imperial' ? '' : 'none';
+  // Update labels for neck/waist/hip
+  const lenUnit = _epUnits === 'imperial' ? 'in' : 'cm';
+  document.getElementById('ep-neck-label').textContent  = `Neck (${lenUnit})`;
+  document.getElementById('ep-waist-label').textContent = `Waist (${lenUnit})`;
+  document.getElementById('ep-hip-label').textContent   = `Hip (${lenUnit})`;
+  // Populate values
+  if (_epUnits === 'metric') {
+    document.getElementById('ep-height-cm').value = p.height || '';
+    document.getElementById('ep-weight-kg').value = p.weight || '';
+    document.getElementById('ep-neck').value  = p.neck  || '';
+    document.getElementById('ep-waist').value = p.waist || '';
+    document.getElementById('ep-hip').value   = p.hip   || '';
+  } else {
+    if (p.height) {
+      const { ft, in: inches } = cmToFtIn(p.height);
+      document.getElementById('ep-height-ft').value = ft;
+      document.getElementById('ep-height-in').value = inches;
+    }
+    if (p.weight) document.getElementById('ep-weight-lb').value = kgToLbs(p.weight).toFixed(1);
+    if (p.neck)   document.getElementById('ep-neck').value  = cmToInches(p.neck).toFixed(1);
+    if (p.waist)  document.getElementById('ep-waist').value = cmToInches(p.waist).toFixed(1);
+    if (p.hip)    document.getElementById('ep-hip').value   = cmToInches(p.hip).toFixed(1);
+  }
+  document.getElementById('ep-hip-wrap').style.display = p.gender==='female'?'block':'none';
+  openModal('modal-edit-profile');
+}
+async function saveEditProfile() {
+  const p = userProfile;
+  const newHeight = readEpHeightCm();
+  const newWeight = readEpWeightKg();
+  const newNeck   = readLengthCm(document.getElementById('ep-neck').value, _epUnits);
+  const newWaist  = readLengthCm(document.getElementById('ep-waist').value, _epUnits);
+  const newHip    = readLengthCm(document.getElementById('ep-hip').value, _epUnits);
+  p.height = newHeight || p.height;
+  p.weight = newWeight || p.weight;
+  p.neck   = newNeck   || p.neck;
+  p.waist  = newWaist  || p.waist;
+  p.hip    = newHip    || p.hip;
+  p.fat    = calcBodyFat(p.gender, p.height, p.neck, p.waist, p.hip);
+  p.lbm    = +(p.weight*(1-p.fat/100)).toFixed(1);
+  p.bmi    = calcBMI(p.height, p.weight);
+  p.targets= calcTargets(p);
+  // Persist the chosen units as the user's preference
+  p.units = _epUnits;
+  p.updatedAt = Date.now();
+  await Db.saveProfile(currentUser?.uid||'local', p);
+  renderProfile();
+  renderHome();
+  closeModal('modal-edit-profile');
+  toast('Profile updated ✓');
+}
+
+// ─── Nav hook ─────────────────────────────────
+const _origSetNav = setNav;
+window.setNav = function(id) {
+  _origSetNav(id);
+  if (id==='profile') renderProfile();
+  if (id==='log') { initLogPage(); }
+  if (id==='trends') { renderTrends(); }
+  if (id==='home') { wireHomeDateNav(); renderHome(); }
+};
+
+// ─── Custom Picker (replaces native <select> for iOS readability) ────
+// Each picker is an object with: id, label, options [{value,label}], onChange, currentValue
+const _pickers = {};
+
+function registerPicker(id, opts) {
+  // opts: { label, options:[{value,label}], current, onChange }
+  _pickers[id] = opts;
+  refreshPickerBtn(id);
+}
+
+function refreshPickerBtn(id) {
+  const cfg = _pickers[id];
+  if (!cfg) return;
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const cur = cfg.options.find(o => o.value === cfg.current);
+  const valEl = btn.querySelector('.picker-val');
+  if (valEl) {
+    valEl.textContent = cur ? cur.label : (cfg.placeholder || 'Choose…');
+    valEl.classList.toggle('empty', !cur);
+  }
+}
+
+function openPicker(id) {
+  const cfg = _pickers[id];
+  if (!cfg) return;
+  document.getElementById('picker-title').textContent = cfg.label || 'Choose';
+  const optsContainer = document.getElementById('picker-options');
+  optsContainer.innerHTML = '';
+  // Build option rows with addEventListener instead of inline onclick — works
+  // reliably on iOS Safari which sometimes mishandles inline handlers with
+  // JSON-stringified attributes.
+cfg.options.forEach(o => {
+    const row = document.createElement('div');
+    row.className = 'picker-opt' + (o.value === cfg.current ? ' selected' : '');
+    row.innerHTML = `<span>${escapeHtml(o.label)}</span>${o.value === cfg.current ? '<span class="check">✓</span>' : ''}`;
+    row.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      cfg.current = o.value;
+      refreshPickerBtn(id);
+      const sheet = document.getElementById('picker-sheet');
+      sheet.classList.remove('open');
+      if (cfg.onChange) cfg.onChange(o.value);
+    });
+optsContainer.appendChild(row);
+  });
+  document.getElementById('picker-sheet').classList.add('open');
+}
+  
+function selectPickerOption(id, value) {
+  const cfg = _pickers[id];
+  if (!cfg) return;
+  cfg.current = value;
+  refreshPickerBtn(id);
+  // Force-hide the sheet immediately + on next frame (iOS Safari sometimes ignores
+  // class removal mid-tap if a re-render is queued)
+  const sheet = document.getElementById('picker-sheet');
+  if (sheet) {
+    sheet.classList.remove('open');
+    sheet.style.display = 'none';
+    requestAnimationFrame(() => { sheet.style.display = ''; });
+  }
+  if (cfg.onChange) cfg.onChange(value);
+}
+
+function closePicker() {
+  document.getElementById('picker-sheet').classList.remove('open');
+}
+
+// Tap outside the sheet to close
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('picker-sheet');
+  if (overlay) overlay.addEventListener('click', e => { if (e.target === overlay) closePicker(); });
+});
+
+// Update picker-current value programmatically (without triggering onChange)
+function setPickerValue(id, value) {
+  const cfg = _pickers[id];
+  if (!cfg) return;
+  cfg.current = value;
+  refreshPickerBtn(id);
+}
+function getPickerValue(id) {
+  return _pickers[id]?.current;
+}
+
+// ─── Modal helpers ────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e => { if (e.target===m) m.classList.remove('open'); });
+});
+
+// ─── Toast ────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ─── Date init ────────────────────────────────
+document.getElementById('log-date').value = todayStr();
+
+// ─── PWA Install ──────────────────────────────
+// Browsers fire `beforeinstallprompt` when the app meets PWA install criteria.
+// We capture the event so handleInstallClick can use it. The button itself is
+// always visible so users on iOS/older browsers still have a path forward.
+let _installPromptEvent = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _installPromptEvent = e;
+});
+
+window.addEventListener('appinstalled', () => {
+  _installPromptEvent = null;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'none';
+  toast('App installed ✓');
+});
+
+// Hide install button if the app is already running as installed PWA
+function hideInstallIfStandalone() {
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+  if (isStandalone) {
+    const btn = document.getElementById('install-btn');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+async function handleInstallClick() {
+  // Best case: native Android/Chrome install prompt is available
+  if (_installPromptEvent) {
+    _installPromptEvent.prompt();
+    const { outcome } = await _installPromptEvent.userChoice;
+    if (outcome === 'accepted') toast('Installing…');
+    _installPromptEvent = null;
+    const btn = document.getElementById('install-btn');
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+
+  // No native prompt — show beautiful guide modal
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  const modal = document.getElementById('pwa-install-modal');
+  const iosGuide = document.getElementById('pwa-ios-guide');
+  const androidGuide = document.getElementById('pwa-android-guide');
+
+  if (isIOS) {
+    iosGuide.style.display = 'block';
+    androidGuide.style.display = 'none';
+  } else {
+    iosGuide.style.display = 'none';
+    androidGuide.style.display = 'block';
+  }
+
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePwaModal() {
+  const modal = document.getElementById('pwa-install-modal');
+  if (modal) modal.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ─── Boot ─────────────────────────────────────
+try { initFB(); } catch(e) { console.warn('initFB failed', e); }
+
+if (_auth) {
+  // Handle Google sign-in redirect result (used on iOS PWA where popups don't work)
+  _auth.getRedirectResult().then(result => {
+    if (result && result.user) {
+      currentUser = { uid: result.user.uid, email: result.user.email, displayName: result.user.displayName };
+      // afterLogin will be triggered by onAuthStateChanged below
+    }
+  }).catch(e => {
+    if (e.code && e.code !== 'auth/no-auth-event') {
+      console.warn('[NutriLog] redirect result error:', e.code, e.message);
+    }
+  });
+
+  _auth.onAuthStateChanged(async user => {
+    if (user) {
+      currentUser = { uid: user.uid, email: user.email, displayName: user.displayName };
+      await afterLogin();
+    }
+  });
+} else {
+  // Firebase didn't initialise — show a quiet offline-mode link
+  const p = document.createElement('p');
+  p.innerHTML = `<br><small style="color:var(--muted)">Sign-in unavailable. <a href="#" onclick="demoLogin();return false;" style="color:var(--accent)">Continue offline</a></small>`;
+  document.querySelector('.auth-card').appendChild(p);
+}
+
+// ─── Service Worker registration + AUTO-UPDATE ───────────────
+// Whenever you push a new version, this code makes sure users see it
+// on their next visit WITHOUT needing to clear their cache or reset
+// the app. Two mechanisms work together:
+//
+//   1. The service worker uses a "network-first" strategy for HTML,
+//      so when online, the browser always tries the network first.
+//
+//   2. When the SW itself is updated (because you bumped SW_VERSION
+//      in sw.js), the page detects the new SW activating and
+//      automatically reloads itself once.
+//
+// Hide the install button if we're already running as an installed PWA
+hideInstallIfStandalone();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+
+      // Check for updates on every page load (default is every ~24h, this is faster)
+      reg.update().catch(() => {});
+
+      // Listen for a new SW being found
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        if (!newSW) return;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            // A NEW service worker has installed and there's already an old one
+            // controlling the page. The new SW will activate (because it calls
+            // skipWaiting()) and the controllerchange listener below will reload.
+            console.log('[NutriLog] New version installed, will activate shortly…');
+          }
+        });
+      });
+
+      // When the active SW changes (= our new one took over), reload the page once
+      // so the user sees the fresh code instead of the old cached version.
+      let _hasReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (_hasReloaded) return;   // Guard against the reload loop on first install
+        _hasReloaded = true;
+        // Show a brief toast so the user knows what happened
+        try { toast('New version — refreshing…'); } catch(_) {}
+        setTimeout(() => window.location.reload(), 600);
+      });
+
+      // Also poll for updates every 60s so long-running tabs see them too
+      setInterval(() => reg.update().catch(() => {}), 60_000);
+    } catch (err) {
+      console.warn('[NutriLog] SW registration failed:', err);
+    }
+  });
+}
+</script>
+</body>
+</html>
