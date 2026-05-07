@@ -1252,7 +1252,9 @@ async function handleGoogleAuth(forcePopup = false) {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   // forcePopup overrides redirect — used by the fallback retry link when redirect failed
-  const useRedirect = (isStandalone || isIOS) && !forcePopup;
+  // Only use redirect for iOS in standalone mode (installed PWA). In regular Safari,
+  // popup tends to work — and avoids ITP cookie issues entirely.
+  const useRedirect = isStandalone && !forcePopup;
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
     if (useRedirect) {
