@@ -4,11 +4,11 @@ const SW_VERSION = '2026-05-07-1';
 const CACHE_NAME = `nutrilog-${SW_VERSION}`;
 
 const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
 ];
 
 // ── INSTALL ───────────────────────────────────────────────────────────────────
