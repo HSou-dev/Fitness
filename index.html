@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-04-29-11"/>
+<meta name="app-version" content="2026-05-07-1"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -260,145 +260,9 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
 #picker-sheet .sheet .picker-opt:hover { border-color: var(--accent); }
 #picker-sheet .sheet .picker-opt.selected { border-color: var(--accent); background: rgba(200,240,110,.08); }
 #picker-sheet .sheet .picker-opt .check { color: var(--accent); font-weight: 600; }
-
-/* PWA Install Modal Steps */
-.pwa-step-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: .7rem;
-  transition: border-color var(--transition);
-}
-.pwa-step-card:hover { border-color: rgba(200,240,110,.3); }
-.pwa-step-num {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #0f1117;
-  font-weight: 700;
-  font-size: .85rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 2px;
-}
-.pwa-step-body { flex: 1; min-width: 0; }
-.pwa-step-title { font-weight: 600; font-size: .95rem; margin-bottom: .3rem; }
-.pwa-step-desc { font-size: .82rem; color: var(--muted); line-height: 1.5; }
-.pwa-step-icon { margin-top: .6rem; opacity: .85; }
 </style>
 </head>
 <body>
-
-<!-- PWA INSTALL MODAL -->
-<div id="pwa-install-modal" class="modal-overlay" onclick="if(event.target===this)closePwaModal()">
-  <div class="modal-sheet" style="max-height:90dvh;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;">
-      <h2 style="font-size:1.3rem;">Install NutriLog</h2>
-      <button class="btn btn-ghost btn-sm" onclick="closePwaModal()" style="font-size:1.2rem;padding:.2rem .5rem;">✕</button>
-    </div>
-
-    <!-- iOS Guide -->
-    <div id="pwa-ios-guide">
-      <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.2rem;line-height:1.5;">
-        Add NutriLog to your Home Screen for a full-screen app experience — no App Store needed.
-      </p>
-      <div class="pwa-step-card">
-        <div class="pwa-step-num">1</div>
-        <div class="pwa-step-body">
-          <div class="pwa-step-title">Tap the Share button</div>
-          <div class="pwa-step-desc">Find the Share icon at the bottom of Safari — it looks like a box with an arrow pointing up.</div>
-          <div class="pwa-step-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div class="pwa-step-card">
-        <div class="pwa-step-num">2</div>
-        <div class="pwa-step-body">
-          <div class="pwa-step-title">Tap "Add to Home Screen"</div>
-          <div class="pwa-step-desc">Scroll down in the Share sheet and tap <strong style="color:var(--text)">Add to Home Screen</strong>.</div>
-          <div class="pwa-step-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              <line x1="14" y1="17" x2="20" y2="17"/><line x1="17" y1="14" x2="17" y2="20"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div class="pwa-step-card">
-        <div class="pwa-step-num">3</div>
-        <div class="pwa-step-body">
-          <div class="pwa-step-title">Tap "Add"</div>
-          <div class="pwa-step-desc">Confirm the name and tap <strong style="color:var(--text)">Add</strong> in the top-right corner. NutriLog will appear on your Home Screen!</div>
-          <div class="pwa-step-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div style="background:rgba(200,240,110,.07);border:1px solid rgba(200,240,110,.2);border-radius:var(--radius-sm);padding:.8rem 1rem;margin-top:1rem;font-size:.78rem;color:var(--muted);line-height:1.5;">
-        💡 <strong style="color:var(--text)">Safari only</strong> — iOS install requires Safari. If you're in Chrome or another browser, open this page in Safari first.
-      </div>
-    </div>
-
-    <!-- Android Guide (fallback when no native prompt) -->
-    <div id="pwa-android-guide" style="display:none;">
-      <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.2rem;line-height:1.5;">
-        Add NutriLog to your Home Screen for instant access — no Play Store needed.
-      </p>
-      <div class="pwa-step-card">
-        <div class="pwa-step-num">1</div>
-        <div class="pwa-step-body">
-          <div class="pwa-step-title">Open the browser menu</div>
-          <div class="pwa-step-desc">Tap the <strong style="color:var(--text)">⋮</strong> menu in the top-right corner of Chrome.</div>
-          <div class="pwa-step-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="5" r="1" fill="var(--accent)"/><circle cx="12" cy="12" r="1" fill="var(--accent)"/><circle cx="12" cy="19" r="1" fill="var(--accent)"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div class="pwa-step-card">
-        <div class="pwa-step-num">2</div>
-        <div class="pwa-step-body">
-          <div class="pwa-step-title">Tap "Add to Home screen"</div>
-          <div class="pwa-step-desc">Select <strong style="color:var(--text)">Add to Home screen</strong> or <strong style="color:var(--text)">Install app</strong> from the menu.</div>
-          <div class="pwa-step-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              <line x1="14" y1="17" x2="20" y2="17"/><line x1="17" y1="14" x2="17" y2="20"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div class="pwa-step-card">
-        <div class="pwa-step-num">3</div>
-        <div class="pwa-step-body">
-          <div class="pwa-step-title">Tap "Add"</div>
-          <div class="pwa-step-desc">Confirm the installation. NutriLog will appear on your Home Screen like a native app!</div>
-          <div class="pwa-step-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div style="background:rgba(200,240,110,.07);border:1px solid rgba(200,240,110,.2);border-radius:var(--radius-sm);padding:.8rem 1rem;margin-top:1rem;font-size:.78rem;color:var(--muted);line-height:1.5;">
-        💡 <strong style="color:var(--text)">Chrome recommended</strong> — for best results use Chrome or Edge. Firefox does not support PWA installation.
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- AUTH PAGE -->
 <section class="page active" id="page-auth">
@@ -436,6 +300,12 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
         </svg>
         Continue with Google
       </button>
+      <p style="text-align:center;margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--border);">
+        <button class="btn btn-sm btn-ghost" id="install-btn-auth" onclick="handleInstallClick()" style="font-size:.78rem;">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:.3rem;vertical-align:-1px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Install NutriLog as an app
+        </button>
+      </p>
     </div>
   </div>
 </section>
@@ -1366,7 +1236,7 @@ async function handleAuth() {
   }
 }
 
-async function handleGoogleAuth() {
+async function handleGoogleAuth(forcePopup = false) {
   const errEl = document.getElementById('auth-error');
   errEl.style.display = 'none';
   if (!isFirebaseConfigured()) {
@@ -1381,10 +1251,13 @@ async function handleGoogleAuth() {
   // Detect iOS PWA standalone mode: popups don't work there. Use redirect instead.
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const useRedirect = isStandalone || isIOS;
+  // forcePopup overrides redirect — used by the fallback retry link when redirect failed
+  const useRedirect = (isStandalone || isIOS) && !forcePopup;
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
     if (useRedirect) {
+      // Mark that we sent the user via redirect, so on return we can detect if it failed
+      sessionStorage.setItem('pendingGoogleRedirect', '1');
       // signInWithRedirect leaves the page; the result is handled on return
       // by getRedirectResult in the boot section.
       await _auth.signInWithRedirect(provider);
@@ -2963,8 +2836,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 window.addEventListener('appinstalled', () => {
   _installPromptEvent = null;
-  const btn = document.getElementById('install-btn');
-  if (btn) btn.style.display = 'none';
+  document.querySelectorAll('#install-btn, #install-btn-auth').forEach(btn => btn.style.display = 'none');
   toast('App installed ✓');
 });
 
@@ -2974,47 +2846,41 @@ function hideInstallIfStandalone() {
     window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true;
   if (isStandalone) {
-    const btn = document.getElementById('install-btn');
-    if (btn) btn.style.display = 'none';
+    document.querySelectorAll('#install-btn, #install-btn-auth').forEach(btn => btn.style.display = 'none');
   }
 }
 
 async function handleInstallClick() {
-  // Best case: native Android/Chrome install prompt is available
+  // Best case: native install prompt is available
   if (_installPromptEvent) {
     _installPromptEvent.prompt();
     const { outcome } = await _installPromptEvent.userChoice;
     if (outcome === 'accepted') toast('Installing…');
     _installPromptEvent = null;
-    const btn = document.getElementById('install-btn');
-    if (btn) btn.style.display = 'none';
+    document.querySelectorAll('#install-btn, #install-btn-auth').forEach(btn => btn.style.display = 'none');
     return;
   }
 
-  // No native prompt — show beautiful guide modal
+  // No native prompt — give platform-specific instructions
   const ua = navigator.userAgent;
-  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
+  const isChrome = /Chrome|CriOS/.test(ua) && !/Edge|EdgiOS/.test(ua);
+  const isFirefox = /Firefox|FxiOS/.test(ua);
 
-  const modal = document.getElementById('pwa-install-modal');
-  const iosGuide = document.getElementById('pwa-ios-guide');
-  const androidGuide = document.getElementById('pwa-android-guide');
-
+  let msg;
   if (isIOS) {
-    iosGuide.style.display = 'block';
-    androidGuide.style.display = 'none';
+    msg = 'To install on iOS:\n\n1. Tap the Share button (square with arrow up) at the bottom of Safari\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" in the top right';
+  } else if (isAndroid && isChrome) {
+    msg = 'To install on Android Chrome:\n\n1. Tap the ⋮ menu (top right)\n2. Tap "Install app" or "Add to Home screen"\n\nIf those options don\'t appear, the browser may not have detected the app yet — try refreshing the page after using it for ~30 seconds.';
+  } else if (isFirefox) {
+    msg = 'Firefox does not support PWA installation directly. Please use Chrome, Edge, or Brave to install this app.';
+  } else if (isChrome) {
+    msg = 'To install:\n\n1. Click the install icon (computer with down-arrow) in the address bar\nOR\n2. Open the ⋮ menu and click "Install NutriLog…"';
   } else {
-    iosGuide.style.display = 'none';
-    androidGuide.style.display = 'block';
+    msg = 'To install this app:\n\n• On mobile: use Chrome, Safari (iOS), or Edge\n• On desktop: use Chrome or Edge\n\nLook for an "Install" option in the browser menu or address bar.';
   }
-
-  modal.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closePwaModal() {
-  const modal = document.getElementById('pwa-install-modal');
-  if (modal) modal.classList.remove('open');
-  document.body.style.overflow = '';
+  alert(msg);
 }
 
 // ─── Boot ─────────────────────────────────────
@@ -3025,9 +2891,21 @@ if (_auth) {
   _auth.getRedirectResult().then(result => {
     if (result && result.user) {
       currentUser = { uid: result.user.uid, email: result.user.email, displayName: result.user.displayName };
+      sessionStorage.removeItem('pendingGoogleRedirect');
       // afterLogin will be triggered by onAuthStateChanged below
+    } else if (sessionStorage.getItem('pendingGoogleRedirect') === '1') {
+      // We sent the user via redirect but got nothing back — Safari ITP likely blocked
+      // the third-party cookie from firebaseapp.com. Show a clear message and offer
+      // a popup retry.
+      sessionStorage.removeItem('pendingGoogleRedirect');
+      const errEl = document.getElementById('auth-error');
+      if (errEl) {
+        errEl.style.display = 'block';
+        errEl.innerHTML = 'Google sign-in could not complete on this browser (Safari blocks the redirect). <a href="#" style="color:var(--accent);" onclick="handleGoogleAuth(true);return false;">Try again with popup</a> — please allow popups when prompted.';
+      }
     }
   }).catch(e => {
+    sessionStorage.removeItem('pendingGoogleRedirect');
     if (e.code && e.code !== 'auth/no-auth-event') {
       console.warn('[NutriLog] redirect result error:', e.code, e.message);
     }
