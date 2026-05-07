@@ -17,18 +17,18 @@
 // updates instant.
 // ─────────────────────────────────────────────────────────────────
 
-const SW_VERSION = '2026-05-06-1';   // ← bump this after each push for instant updates
+const SW_VERSION = '2026-05-07-1';   // ← bump this after each push for instant updates
 const CACHE_NAME = `nutrilog-${SW_VERSION}`;
 
 // Files we want available even when fully offline. The HTML itself is
 // listed so that the app shell loads from cache if the network is dead.
 const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon.svg',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
 ];
 
 // ─── INSTALL ─────────────────────────────────────────────────
@@ -102,8 +102,8 @@ async function networkFirst(req) {
     if (cached) return cached;
     if (req.mode === 'navigate') {
       return (
-        (await caches.match('/index.html')) ||
-        (await caches.match('/')) ||
+        (await caches.match('./index.html')) ||
+        (await caches.match('./')) ||
         new Response('Offline', { status: 503 })
       );
     }
