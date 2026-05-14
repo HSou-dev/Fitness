@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-05-14-14"/>
+<meta name="app-version" content="2026-05-14-16"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -123,6 +123,10 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
 .selected-row .sr-name { flex: 1; font-size: .88rem; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .selected-row .sr-name .sr-serving { font-size: .68rem; color: var(--muted); display: block; font-weight: 400; }
 .selected-row .sr-qty { width: 60px; padding: .35rem .4rem; font-size: .85rem; text-align: center; }
+.qty-stepper { display: inline-flex; align-items: center; gap: .25rem; flex-shrink: 0; }
+.qty-step-btn { width: 28px; height: 28px; padding: 0; background: var(--bg-elev); border: 1px solid var(--border); color: var(--ink); border-radius: 6px; font-size: 1rem; line-height: 1; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.qty-step-btn:active { background: var(--accent); color: #0f1117; }
+.qty-step-val { width: 50px !important; font-size: .85rem; padding: .3rem .25rem; text-align: center; background: var(--bg-elev); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; }
 .selected-row .sr-cal { font-size: .78rem; color: var(--accent); font-weight: 600; flex-shrink: 0; min-width: 60px; text-align: right; }
 .selected-row .sr-del { padding: .3rem .5rem; font-size: 1rem; line-height: 1; flex-shrink: 0; }
 .meal-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: .8rem; }
@@ -540,16 +544,6 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
           <div style="font-size:.95rem;color:var(--ink);font-weight:600;" id="home-streak-fast-val">— days</div>
         </div>
       </div>
-</div>
-
-    <!-- Water tracker: compact horizontal card with glass count and quick +1 button -->
-    <div class="card" style="margin-top:1rem;padding:.7rem .8rem;display:flex;align-items:center;gap:.8rem;cursor:pointer;" onclick="showPage('log');setNav('log');">
-      <div style="width:36px;height:36px;border-radius:50%;background:rgba(64,158,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">💧</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:.72rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Water today</div>
-        <div style="font-size:.95rem;color:var(--ink);font-weight:600;" id="home-water-val">— glasses</div>
-      </div>
-      <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();quickAddWater();" style="flex-shrink:0;font-size:.75rem;padding:.3rem .65rem;">+1</button>
     </div>
 
     <div class="cal-ring-section mt-2">
@@ -612,19 +606,7 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
     <span class="topbar-title">Diet Log</span>
     <input type="date" id="log-date" style="width:auto;padding:.4rem .7rem;font-size:.82rem"/>
   </div>
-<div class="log-content">
-    <!-- Water log: continuous +/- with current count, mirrors home card but with controls -->
-    <div class="card mb-2" style="padding:.9rem;display:flex;align-items:center;gap:.8rem;">
-      <div style="width:44px;height:44px;border-radius:50%;background:rgba(64,158,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.4rem;">💧</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:.72rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Water</div>
-        <div style="font-size:1.15rem;color:var(--ink);font-weight:600;font-family:var(--mono,monospace);" id="log-water-val">0 glasses</div>
-      </div>
-      <div style="display:flex;gap:.35rem;align-items:center;flex-shrink:0;">
-        <button class="btn btn-sm btn-secondary" onclick="adjustWater(-1)" style="min-width:36px;font-size:1rem;line-height:1;padding:.4rem 0;" aria-label="Remove one glass">−</button>
-        <button class="btn btn-sm btn-primary" onclick="adjustWater(1)" style="min-width:36px;font-size:1rem;line-height:1;padding:.4rem 0;" aria-label="Add one glass">+</button>
-      </div>
-    </div>
+  <div class="log-content">
     <div class="card mb-2">
       <p class="section-title" style="margin-top:0">Daily Totals</p>
       <div class="macro-row">
@@ -680,7 +662,8 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
         <p id="fast-started-text" style="font-size:.72rem;color:var(--text-muted);margin:0 0 1rem;">Started —</p>
         <div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="breakFast()" style="min-width:140px;">Break Fast</button>
-          <button class="btn btn-secondary" onclick="cancelFast()" style="min-width:100px;" title="Discard this fast without logging it (for accidental starts)">Cancel</button>
+          <button class="btn btn-secondary" onclick="openFastModal()" style="min-width:90px;" title="Adjust start time or fill end to log a completed fast">Edit</button>
+          <button class="btn btn-secondary" onclick="cancelFast()" style="min-width:90px;" title="Discard this fast without logging it (for accidental starts)">Cancel</button>
         </div>
       </div>
     </div>
@@ -707,8 +690,7 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
           <span style="font-size:.78rem;color:var(--text-muted);">hours</span>
         </div>
         <div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="startFast()" style="min-width:140px;">Start Now</button>
-          <button class="btn btn-secondary" onclick="openLogPastFastModal()" style="min-width:140px;">Log Past Fast</button>
+          <button class="btn btn-primary" onclick="openFastModal()" style="min-width:200px;">Start / Log Fast</button>
         </div>
       </div>
     </div>
@@ -866,28 +848,18 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
 
     <!-- Name (e.g. Breakfast, Post-workout) -->
     <div class="field" style="margin-bottom:.9rem;">
-      <label>Name</label>
+      <label>Name <span style="font-weight:400;color:var(--text-muted);font-size:.78rem;">(applies to all items below)</span></label>
       <input type="text" id="am-meal-name" placeholder="e.g. Breakfast, Post-workout, Snack…"/>
     </div>
 
-    <!-- Meal picker -->
-    <div class="field" style="margin-bottom:.9rem;">
+    <!-- Multi-meal rows: each row is meal + serving + remove. Container is populated by JS. -->
+    <div class="field" style="margin-bottom:.6rem;">
       <label>What did you eat?</label>
-      <select id="am-meal-select" style="width:100%;padding:.55rem .7rem;font-size:.92rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;"></select>
+      <div id="am-meal-rows" style="display:flex;flex-direction:column;gap:.7rem;"></div>
+      <button type="button" class="btn btn-sm btn-secondary" id="am-add-row-btn" onclick="addLogMealRow()" style="margin-top:.6rem;width:100%;">+ Add another meal</button>
     </div>
 
-    <!-- Serving multiplier -->
-    <div class="field" style="margin-bottom:.9rem;">
-      <label>Serving size</label>
-      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
-        <button type="button" class="btn btn-sm btn-secondary am-mult-chip" data-mult="0.5" onclick="setLogMultiplier(0.5)">×0.5</button>
-        <button type="button" class="btn btn-sm btn-primary am-mult-chip" data-mult="1" onclick="setLogMultiplier(1)">×1</button>
-        <button type="button" class="btn btn-sm btn-secondary am-mult-chip" data-mult="1.5" onclick="setLogMultiplier(1.5)">×1.5</button>
-        <input type="number" id="am-mult-custom" value="1" min="0.1" step="0.1" style="flex:1;max-width:90px;padding:.4rem .6rem;font-size:.85rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;text-align:center;" oninput="onLogMultCustomInput(this.value)"/>
-      </div>
-    </div>
-
-    <!-- Live preview of what gets logged -->
+    <!-- Live preview of what gets logged (combined across all rows) -->
     <div id="am-log-preview" style="background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:.8rem;margin-bottom:.9rem;display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
         <span style="font-size:.78rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Will log</span>
@@ -1043,8 +1015,8 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
 <!-- Log/Edit Past Fast modal -->
 <div class="modal-overlay" id="modal-log-fast">
   <div class="modal-sheet">
-    <div class="flex-between mb-2"><h3 id="lf-title">Log Past Fast</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-log-fast')">✕</button></div>
-    <p class="text-muted mb-2" style="font-size:.82rem;">Enter the start and end times. Use the picker or type directly.</p>
+    <div class="flex-between mb-2"><h3 id="lf-title">Start / Log Fast</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-log-fast')">✕</button></div>
+    <p class="text-muted mb-2" style="font-size:.82rem;">Set when the fast started. Leave end blank to keep it running, or fill both to log a completed fast.</p>
 
     <!-- Start datetime -->
     <div class="field" style="margin-bottom:.8rem;">
@@ -1052,10 +1024,13 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
       <input type="datetime-local" id="lf-start" style="width:100%;padding:.55rem .7rem;font-size:.92rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;"/>
     </div>
 
-    <!-- End datetime -->
+    <!-- End datetime (optional) -->
     <div class="field" style="margin-bottom:.8rem;">
-      <label>End (when you broke the fast)</label>
-      <input type="datetime-local" id="lf-end" style="width:100%;padding:.55rem .7rem;font-size:.92rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;"/>
+      <label>End <span style="font-weight:400;color:var(--text-muted);font-size:.78rem;">(leave blank to keep the fast running)</span></label>
+      <div style="display:flex;gap:.4rem;align-items:center;">
+        <input type="datetime-local" id="lf-end" style="flex:1;padding:.55rem .7rem;font-size:.92rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;"/>
+        <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('lf-end').value='';refreshLfPreview();" style="font-size:.72rem;flex-shrink:0;" title="Clear end time">Clear</button>
+      </div>
     </div>
 
     <!-- Target hours: used for the streak/goal-met check -->
@@ -1528,22 +1503,6 @@ const Db = {
       return [];
     }
   },
-  // ─── Water tracking ────────────────────────────
-  // Stored as a single number per day inside the same log doc, alongside meals.
-  // Keeps everything for a date in one Firestore read.
-  async getWater(uid, date) {
-    const log = await Db.getLog(uid, date);
-    return Number(log?.water || 0);
-  },
-  async setWater(uid, date, glasses) {
-    if (!_db) {
-      const all = localGet('logs') || {};
-      all[date] = { ...(all[date] || {}), water: glasses };
-      localSet('logs', all);
-      return;
-    }
-    await _db.doc(`users/${uid}/logs/${date}`).set({ water: glasses }, { merge: true });
-  },
   async deleteCompletedFast(uid, startTs) {
     if (!_db) {
       const list = (localGet('fast_history') || []).filter(f => f.startTs !== startTs);
@@ -1683,9 +1642,8 @@ async function afterLogin() {
       userProfile.globalMealsMigrated = true;
       await Db.saveProfile(uid, userProfile);
     }
-savedMeals = await Db.getMeals(uid);
+    savedMeals = await Db.getMeals(uid);
     await loadFastState();
-    await loadWaterToday();
     showPage('home');
     showNav();
     wireHomeDateNav();
@@ -2172,21 +2130,27 @@ function _localInputToEpoch(val) {
   return new Date(val).getTime();
 }
 
-function openLogPastFastModal() {
+// Unified entry point: opens the fast modal in the right state based on context.
+//   - If a fast is currently active → pre-fill with the running fast's start; end is blank
+//     (user can edit start, or fill end to break it now).
+//   - Otherwise → defaults to "started now, no end yet" — tap Save to begin a live fast,
+//     OR fill the end time to log a past completed fast.
+function openFastModal() {
   _lfEditingTs = null;
-  _lfTargetH = 16;
-  document.getElementById('lf-title').textContent = 'Log Past Fast';
-  // Default: yesterday 7 PM → today 9 AM (a typical 14h fast window)
-  const now = new Date();
-  const endDefault = new Date(now);
-  endDefault.setHours(9, 0, 0, 0);
-  // If "today 9am" is in the future (it's still morning), step back one day
-  if (endDefault > now) endDefault.setDate(endDefault.getDate() - 1);
-  const startDefault = new Date(endDefault);
-  startDefault.setDate(startDefault.getDate() - 1);
-  startDefault.setHours(19, 0, 0, 0);
-  document.getElementById('lf-start').value = _epochToLocalInput(startDefault.getTime());
-  document.getElementById('lf-end').value = _epochToLocalInput(endDefault.getTime());
+  _lfTargetH = (_fastState && _fastState.targetHours) || 16;
+  document.getElementById('lf-title').textContent = _fastState ? 'Edit / Break Fast' : 'Start / Log Fast';
+  if (_fastState) {
+    // Active fast → editing it
+    document.getElementById('lf-start').value = _epochToLocalInput(_fastState.startTs);
+    document.getElementById('lf-end').value = ''; // blank = keep running
+    _lfEditingActiveFast = true;
+  } else {
+    // No active fast: default start = now, end blank
+    const now = new Date();
+    document.getElementById('lf-start').value = _epochToLocalInput(now.getTime());
+    document.getElementById('lf-end').value = '';
+    _lfEditingActiveFast = false;
+  }
   document.getElementById('lf-target-custom').value = '';
   document.getElementById('lf-error').style.display = 'none';
   reflectLfTargetChips();
@@ -2195,6 +2159,10 @@ function openLogPastFastModal() {
   openModal('modal-log-fast');
 }
 
+// Legacy alias retained in case anything references it. Routes to the unified modal.
+function openLogPastFastModal() { openFastModal(); }
+let _lfEditingActiveFast = false; // set when modal is editing the currently-active fast
+
 async function openEditFastModal(startTs) {
   // Find the fast entry
   const uid = currentUser?.uid || 'local';
@@ -2202,6 +2170,7 @@ async function openEditFastModal(startTs) {
   const f = items.find(it => it.startTs === startTs);
   if (!f) { toast('Fast not found'); return; }
   _lfEditingTs = startTs;
+  _lfEditingActiveFast = false; // editing a history entry, not the live one
   _lfTargetH = f.targetHours || 16;
   document.getElementById('lf-title').textContent = 'Edit Fast';
   document.getElementById('lf-start').value = _epochToLocalInput(f.startTs);
@@ -2253,17 +2222,37 @@ function refreshLfPreview() {
   const preview = document.getElementById('lf-preview');
   const textEl = document.getElementById('lf-preview-text');
   const statusEl = document.getElementById('lf-preview-status');
-  const startTs = _localInputToEpoch(document.getElementById('lf-start').value);
-  const endTs = _localInputToEpoch(document.getElementById('lf-end').value);
-  if (!startTs || !endTs) { preview.style.display = 'none'; return; }
+  const startVal = document.getElementById('lf-start').value;
+  const endVal = document.getElementById('lf-end').value;
+  const startTs = _localInputToEpoch(startVal);
+  const endTs = _localInputToEpoch(endVal);
+  // No start at all → hide preview
+  if (!startTs) { preview.style.display = 'none'; return; }
+  // No end → show "running" state with elapsed-so-far based on current time
+  if (!endTs) {
+    preview.style.display = 'block';
+    const elapsedH = (Date.now() - startTs) / 3600000;
+    if (elapsedH < 0) {
+      textEl.textContent = 'Start is in the future — fast will begin then';
+      statusEl.textContent = '';
+    } else {
+      textEl.textContent = `Currently fasting · ${elapsedH.toFixed(2)}h elapsed`;
+      const reached = elapsedH >= _lfTargetH;
+      statusEl.innerHTML = reached
+        ? `<span style="color:#34a853;">Already past goal ✓</span> · saving with blank end keeps the fast running`
+        : `<span style="color:var(--text-muted);">Goal: ${_lfTargetH}h</span> · saving with blank end keeps the fast running`;
+    }
+    return;
+  }
+  // Both filled → completed fast preview
   const durationH = (endTs - startTs) / 3600000;
   if (durationH <= 0) {
-    preview.style.display = '';
+    preview.style.display = 'block';
     textEl.textContent = 'End must be after start';
     statusEl.textContent = '';
     return;
   }
-  preview.style.display = '';
+  preview.style.display = 'block';
   textEl.textContent = `Duration: ${durationH.toFixed(2)}h`;
   const reached = durationH >= _lfTargetH;
   const streakOK = durationH >= 14; // FAST_MIN_HOURS — counts toward streak
@@ -2276,28 +2265,73 @@ async function saveLoggedFast() {
   const endTs = _localInputToEpoch(document.getElementById('lf-end').value);
   const errEl = document.getElementById('lf-error');
   errEl.style.display = 'none';
-  if (!startTs || !endTs) { errEl.textContent = 'Enter both start and end times.'; errEl.style.display = ''; return; }
-  if (endTs <= startTs) { errEl.textContent = 'End must be after start.'; errEl.style.display = ''; return; }
-  if (endTs > Date.now() + 60000) { errEl.textContent = 'End time can\'t be in the future.'; errEl.style.display = ''; return; }
-  const actualHours = +((endTs - startTs) / 3600000).toFixed(2);
   const targetHours = Math.max(0.5, _lfTargetH || 16);
   const uid = currentUser?.uid || 'local';
+
+  // Validation: start is required, must not be far in the future
+  if (!startTs) { errEl.textContent = 'Enter a start time.'; errEl.style.display = 'block'; return; }
+  if (startTs > Date.now() + 60000) {
+    errEl.textContent = 'Start time can\'t be in the future.'; errEl.style.display = 'block'; return;
+  }
+
+  // ──────── End is BLANK → "start / keep running" ────────
+  if (!endTs) {
+    // If we were editing a HISTORY entry and the user blanked the end, that means
+    // "re-open this fast as active". Delete the history doc, set as active.
+    try {
+      if (_lfEditingTs !== null && !_lfEditingActiveFast) {
+        await Db.deleteCompletedFast(uid, _lfEditingTs);
+      }
+      _fastState = { startTs, targetHours };
+      await Db.setActiveFast(uid, _fastState);
+      _lfEditingTs = null;
+      _lfEditingActiveFast = false;
+      startFastTickerIfNeeded();
+      refreshFastPageActiveCard();
+      refreshFastHomeCard();
+      invalidateStreaksCache();
+      refreshHomeStreaks();
+      refreshFastHistoryList();
+      closeModal('modal-log-fast');
+      toast('Fast started · target ' + targetHours + 'h');
+    } catch (e) {
+      console.error('[NutriLog] save active fast failed:', e);
+      errEl.textContent = 'Save failed: ' + (e?.message || 'unknown error');
+      errEl.style.display = 'block';
+    }
+    return;
+  }
+
+  // ──────── End is FILLED → "completed fast" ────────
+  if (endTs <= startTs) { errEl.textContent = 'End must be after start.'; errEl.style.display = 'block'; return; }
+  if (endTs > Date.now() + 60000) { errEl.textContent = 'End time can\'t be in the future.'; errEl.style.display = 'block'; return; }
+  const actualHours = +((endTs - startTs) / 3600000).toFixed(2);
   const fast = { startTs, endTs, actualHours, targetHours };
   try {
-    // If editing AND the startTs changed, we must delete the old doc (its id was the old startTs).
+    // If we were editing the ACTIVE fast (filling in its end), clear it from activeFast state.
+    if (_lfEditingActiveFast) {
+      await Db.setActiveFast(uid, null);
+      _fastState = null;
+      startFastTickerIfNeeded(); // clears interval
+    }
+    // If editing a history entry AND the startTs changed, delete the old doc (id == startTs).
     if (_lfEditingTs !== null && _lfEditingTs !== startTs) {
       await Db.deleteCompletedFast(uid, _lfEditingTs);
     }
     await Db.addCompletedFast(uid, fast);
+    _lfEditingTs = null;
+    _lfEditingActiveFast = false;
     invalidateStreaksCache();
     closeModal('modal-log-fast');
     refreshFastHistoryList();
+    refreshFastPageActiveCard();
+    refreshFastHomeCard();
     refreshHomeStreaks();
     toast(_lfEditingTs !== null ? 'Fast updated ✓' : 'Fast logged ✓');
   } catch (e) {
     console.error('[NutriLog] saveLoggedFast failed:', e);
     errEl.textContent = 'Save failed: ' + (e?.message || 'unknown error');
-    errEl.style.display = '';
+    errEl.style.display = 'block';
   }
 }
 
@@ -2343,40 +2377,6 @@ function renderHome() {
 }
 
 // Async refresh of the two streak badges. Doesn't block renderHome.
-// ─── Water tracking ──────────────────────────
-// Single number per day, stored in users/{uid}/logs/{date}.water.
-// Home page shows a read-only count + quick +1; Log page has full +/- controls.
-let _waterToday = 0;
-const WATER_DEFAULT_GOAL = 8; // optional: display "5 / 8 glasses" — tweak later if you want
-
-async function loadWaterToday() {
-  const uid = currentUser?.uid || 'local';
-  _waterToday = await Db.getWater(uid, todayStr());
-  refreshWaterDisplays();
-}
-
-function refreshWaterDisplays() {
-  const homeEl = document.getElementById('home-water-val');
-  if (homeEl) homeEl.textContent = `${_waterToday} glass${_waterToday === 1 ? '' : 'es'}`;
-  const logEl = document.getElementById('log-water-val');
-  if (logEl) logEl.textContent = `${_waterToday} glass${_waterToday === 1 ? '' : 'es'}`;
-}
-
-async function adjustWater(delta) {
-  const next = Math.max(0, _waterToday + delta);
-  if (next === _waterToday) return;
-  _waterToday = next;
-  refreshWaterDisplays(); // optimistic update for snappy UI
-  try {
-    const uid = currentUser?.uid || 'local';
-    await Db.setWater(uid, todayStr(), _waterToday);
-  } catch (e) {
-    console.error('[NutriLog] adjustWater failed:', e);
-    toast('Save failed');
-  }
-}
-
-function quickAddWater() { adjustWater(1); }  
 async function refreshHomeStreaks() {
   const elDiet = document.getElementById('home-streak-diet-val');
   const elFast = document.getElementById('home-streak-fast-val');
@@ -2497,7 +2497,6 @@ async function loadTodayLog(date=todayStr()) {
   if (!todayLog.meals) todayLog.meals = [];
 }
 function renderLogPage() {
-  refreshWaterDisplays();
   const t = todayTotals();
   document.getElementById('day-p').textContent = t.protein.toFixed(1);
   document.getElementById('day-c').textContent = t.carbs.toFixed(1);
@@ -2520,157 +2519,204 @@ function renderLogPage() {
 }
 
 // ─── Log meal modal ───────────────────────────
-// Simplified flow: pick a saved/preset meal + serving multiplier. No ingredient picker.
-// If user can't find their meal, "Add one in Meals →" link routes to Meals page.
-let _logMultiplier = 1;                  // current serving multiplier in the log modal
-let _logEditOriginalQtys = null;         // when editing: snapshot of original item quantities for ×1 reconstruction
+// Multi-row flow: each row is one meal pick + serving multiplier. Rows are independent.
+// Save creates ONE log entry per row, all sharing the same `name` (group label).
+// _logRows holds the in-progress rows: [{ mealId, multiplier, rowId }, ...]
+let _logRows = [];
+let _logRowSeq = 0;
 
 function openAddMealModal() {
   _editingLogIdx = null;
-  _logMultiplier = 1;
-  _logEditOriginalQtys = null;
   document.getElementById('am-meal-name').value = '';
-  // Build the meal dropdown from PRESET_MEALS + savedMeals (global + private merged)
-  populateLogMealSelect();
-  // Reset multiplier UI
-  setLogMultiplier(1);
+  // Start with one empty row
+  _logRows = [];
+  document.getElementById('am-meal-rows').innerHTML = '';
+  addLogMealRow();
   // Update modal title
   const modal = document.getElementById('modal-add-meal');
   modal.querySelector('h3').textContent = 'Log a Meal';
   const saveBtn = modal.querySelector('button.btn-primary.btn-full');
   if (saveBtn) saveBtn.textContent = 'Log Meal';
-  // Refresh preview
+  // Show "Add another" button (hidden during edit)
+  const addBtn = document.getElementById('am-add-row-btn');
+  if (addBtn) addBtn.style.display = '';
   refreshLogPreview();
   openModal('modal-add-meal');
 }
 
-// Open the Log modal in EDIT mode for an existing logged meal.
-// We try to recover the original meal_id from meal.sourceMealId if present.
-// If unknown (legacy entries), fall back to "Custom" with editable multiplier=1.
+// Edit mode: pre-fill ONE row with the existing logged meal. Multi-row not supported
+// in edit mode (you'd just delete + re-add). Add-another button is hidden.
 function editMealEntry(idx) {
   const meal = todayLog.meals?.[idx];
   if (!meal) return;
   _editingLogIdx = idx;
-  _logEditOriginalQtys = meal.items.map(it => ({ foodId: it.foodId, qty: it.qty }));
   document.getElementById('am-meal-name').value = meal.name || '';
-  populateLogMealSelect(meal.sourceMealId || '');
-  // Try to infer the original multiplier from the stored items vs. the source meal's items.
-  // If the source meal isn't available, default to 1.
+  _logRows = [];
+  document.getElementById('am-meal-rows').innerHTML = '';
   const inferredMult = inferMultiplierForLog(meal);
-  setLogMultiplier(inferredMult);
+  addLogMealRow(meal.sourceMealId || '', inferredMult);
   const modal = document.getElementById('modal-add-meal');
   modal.querySelector('h3').textContent = 'Edit Logged Meal';
   const saveBtn = modal.querySelector('button.btn-primary.btn-full');
   if (saveBtn) saveBtn.textContent = 'Update';
+  // Hide Add another in edit mode — editing a single entry only
+  const addBtn = document.getElementById('am-add-row-btn');
+  if (addBtn) addBtn.style.display = 'none';
   refreshLogPreview();
   openModal('modal-add-meal');
 }
 
-// Populate the meal dropdown with: presets first, then global (SHARED) meals, then private.
-function populateLogMealSelect(preselect = '') {
-  const sel = document.getElementById('am-meal-select');
+// Add a new meal row. Optional preselect = mealId to pre-pick, preMult = serving multiplier.
+function addLogMealRow(preselect = '', preMult = 1) {
+  const rowId = 'lr_' + (++_logRowSeq);
+  _logRows.push({ rowId, mealId: preselect, multiplier: preMult });
+  const wrap = document.getElementById('am-meal-rows');
+  if (!wrap) return;
+  // Build the row's HTML
+  const div = document.createElement('div');
+  div.id = rowId;
+  div.style.cssText = 'background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:.7rem;display:flex;flex-direction:column;gap:.5rem;';
+  div.innerHTML = `
+    <div style="display:flex;gap:.4rem;align-items:center;">
+      <select class="lr-meal-select" data-row="${rowId}" style="flex:1;padding:.5rem .6rem;font-size:.88rem;background:var(--bg);color:var(--ink);border:1px solid var(--border);border-radius:7px;"></select>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="removeLogMealRow('${rowId}')" title="Remove this meal" style="flex-shrink:0;padding:.3rem .55rem;">✕</button>
+    </div>
+    <div style="display:flex;gap:.35rem;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:.72rem;color:var(--text-muted);">Serving:</span>
+      <button type="button" class="btn btn-sm btn-secondary lr-mult-chip" data-row="${rowId}" data-mult="0.5" onclick="setLogRowMultiplier('${rowId}', 0.5)">×0.5</button>
+      <button type="button" class="btn btn-sm btn-primary lr-mult-chip" data-row="${rowId}" data-mult="1" onclick="setLogRowMultiplier('${rowId}', 1)">×1</button>
+      <button type="button" class="btn btn-sm btn-secondary lr-mult-chip" data-row="${rowId}" data-mult="1.5" onclick="setLogRowMultiplier('${rowId}', 1.5)">×1.5</button>
+      <input type="number" class="lr-mult-custom" data-row="${rowId}" value="${preMult}" min="0.1" step="0.1" inputmode="decimal" style="width:60px;padding:.35rem .4rem;font-size:.82rem;background:var(--bg);color:var(--ink);border:1px solid var(--border);border-radius:6px;text-align:center;" oninput="onLogRowCustomMult('${rowId}', this.value)"/>
+    </div>
+    <div class="lr-preview" data-row="${rowId}" style="font-size:.74rem;color:var(--text-muted);text-align:right;">—</div>
+  `;
+  wrap.appendChild(div);
+  // Populate the dropdown
+  populateLogRowSelect(rowId, preselect);
+  reflectLogRowMultChips(rowId);
+  refreshLogPreview();
+}
+
+// Remove a row. If it was the last, immediately add a new blank one (keep at least 1).
+function removeLogMealRow(rowId) {
+  _logRows = _logRows.filter(r => r.rowId !== rowId);
+  const el = document.getElementById(rowId);
+  if (el) el.remove();
+  if (!_logRows.length) addLogMealRow();
+  refreshLogPreview();
+}
+
+// Populate a single row's dropdown (presets + global meals + private meals).
+function populateLogRowSelect(rowId, preselect = '') {
+  const sel = document.querySelector(`.lr-meal-select[data-row="${rowId}"]`);
   if (!sel) return;
-  const presets = PRESET_MEALS.map(pm => ({ id: 'preset:' + pm.name, name: pm.name, items: pm.items, source: 'preset' }));
+  const presets = visiblePresetMeals().map(pm => ({ id: 'preset:' + pm.name, name: pm.name, items: pm.items, source: 'preset' }));
   const globals = (savedMeals || []).filter(m => m.source === 'global');
   const privates = (savedMeals || []).filter(m => m.source !== 'global');
-  const optGroup = (label, list, prefix) => {
+  const optGroup = (label, list) => {
     if (!list.length) return '';
-    return `<optgroup label="${label}">` + list.map(m => {
-      const id = prefix ? prefix + ':' + m.id : m.id;
-      return `<option value="${escapeHtml(id)}">${escapeHtml(m.name)}</option>`;
-    }).join('') + '</optgroup>';
+    return `<optgroup label="${label}">` + list.map(m =>
+      `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`
+    ).join('') + '</optgroup>';
   };
   sel.innerHTML =
-    optGroup('Quick Combos', presets, '') +
-    optGroup('Shared Meals', globals, '') +
-    optGroup('My Meals', privates, '');
+    '<option value="">— Pick a meal —</option>' +
+    optGroup('Quick Combos', presets) +
+    optGroup('Shared Meals', globals) +
+    optGroup('My Meals', privates);
   if (preselect && sel.querySelector(`option[value="${CSS.escape(preselect)}"]`)) {
     sel.value = preselect;
   }
   sel.onchange = () => {
-    // Auto-fill the name field with the picked meal's name if name is blank
+    const row = _logRows.find(r => r.rowId === rowId);
+    if (row) row.mealId = sel.value;
+    // Auto-fill the group name with the first picked meal's name (if name is blank)
     const nameEl = document.getElementById('am-meal-name');
-    const picked = getMealFromSelect();
-    if (picked && !nameEl.value.trim()) nameEl.value = picked.name;
+    if (!nameEl.value.trim()) {
+      const m = mealById(sel.value);
+      if (m) nameEl.value = m.name;
+    }
     refreshLogPreview();
   };
 }
 
-// Resolve currently-selected dropdown value to a meal object {name, items}.
-function getMealFromSelect() {
-  const sel = document.getElementById('am-meal-select');
-  if (!sel || !sel.value) return null;
-  const v = sel.value;
-  if (v.startsWith('preset:')) {
-    const presetName = v.slice('preset:'.length);
-    return PRESET_MEALS.find(pm => pm.name === presetName) || null;
+// Resolve a mealId to the meal object {name, items, source}.
+function mealById(id) {
+  if (!id) return null;
+  if (id.startsWith('preset:')) {
+    const n = id.slice('preset:'.length);
+    return PRESET_MEALS.find(pm => pm.name === n) || null;
   }
-  return (savedMeals || []).find(m => m.id === v) || null;
+  return (savedMeals || []).find(m => m.id === id) || null;
 }
 
-// Set the multiplier and reflect in chip styles + custom input.
-function setLogMultiplier(mult) {
-  _logMultiplier = Math.max(0.1, Number(mult) || 1);
-  // Highlight chip if matches one of the presets
-  document.querySelectorAll('.am-mult-chip').forEach(chip => {
+function setLogRowMultiplier(rowId, mult) {
+  const row = _logRows.find(r => r.rowId === rowId);
+  if (!row) return;
+  row.multiplier = Math.max(0.1, Number(mult) || 1);
+  const customEl = document.querySelector(`.lr-mult-custom[data-row="${rowId}"]`);
+  if (customEl) customEl.value = row.multiplier;
+  reflectLogRowMultChips(rowId);
+  refreshLogPreview();
+}
+
+function onLogRowCustomMult(rowId, val) {
+  const row = _logRows.find(r => r.rowId === rowId);
+  if (!row) return;
+  row.multiplier = Math.max(0.1, Number(val) || 1);
+  reflectLogRowMultChips(rowId);
+  refreshLogPreview();
+}
+
+function reflectLogRowMultChips(rowId) {
+  const row = _logRows.find(r => r.rowId === rowId);
+  if (!row) return;
+  document.querySelectorAll(`.lr-mult-chip[data-row="${rowId}"]`).forEach(chip => {
     const v = Number(chip.dataset.mult);
-    if (Math.abs(v - _logMultiplier) < 0.001) {
+    if (Math.abs(v - row.multiplier) < 0.001) {
       chip.classList.remove('btn-secondary'); chip.classList.add('btn-primary');
     } else {
       chip.classList.remove('btn-primary'); chip.classList.add('btn-secondary');
     }
   });
-  const customEl = document.getElementById('am-mult-custom');
-  if (customEl && Math.abs(Number(customEl.value) - _logMultiplier) > 0.001) {
-    customEl.value = _logMultiplier;
-  }
-  refreshLogPreview();
 }
 
-function onLogMultCustomInput(val) {
-  _logMultiplier = Math.max(0.1, Number(val) || 1);
-  // Reset chip highlights — custom value rarely matches a chip exactly
-  document.querySelectorAll('.am-mult-chip').forEach(chip => {
-    const v = Number(chip.dataset.mult);
-    if (Math.abs(v - _logMultiplier) < 0.001) {
-      chip.classList.remove('btn-secondary'); chip.classList.add('btn-primary');
-    } else {
-      chip.classList.remove('btn-primary'); chip.classList.add('btn-secondary');
-    }
-  });
-  refreshLogPreview();
-}
-
+// Update the combined preview + per-row preview lines.
 function refreshLogPreview() {
-  const meal = getMealFromSelect();
   const preview = document.getElementById('am-log-preview');
-  if (!meal || !meal.items || !meal.items.length) {
+  let totalP = 0, totalC = 0, totalF = 0, totalK = 0;
+  let anyValid = false;
+  _logRows.forEach(row => {
+    const m = mealById(row.mealId);
+    const rowPreview = document.querySelector(`.lr-preview[data-row="${row.rowId}"]`);
+    if (!m || !m.items?.length) {
+      if (rowPreview) rowPreview.textContent = '—';
+      return;
+    }
+    const scaled = m.items.map(it => ({ foodId: it.foodId, qty: (it.qty || 0) * row.multiplier }));
+    const s = sumMacros(scaled);
+    totalP += s.protein; totalC += s.carbs; totalF += s.fat; totalK += s.calories;
+    anyValid = true;
+    if (rowPreview) rowPreview.textContent = `${Math.round(s.calories)} kcal · ${s.protein.toFixed(0)}P / ${s.carbs.toFixed(0)}C / ${s.fat.toFixed(0)}F`;
+  });
+  if (!anyValid) {
     if (preview) preview.style.display = 'none';
     return;
   }
-  if (preview) preview.style.display = '';
-  // Scale items by multiplier for preview
-  const scaled = meal.items.map(it => ({ foodId: it.foodId, qty: (it.qty || 0) * _logMultiplier }));
-  const m = sumMacros(scaled);
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  set('am-prev-p', m.protein.toFixed(0));
-  set('am-prev-c', m.carbs.toFixed(0));
-  set('am-prev-f', m.fat.toFixed(0));
-  set('am-prev-k', Math.round(m.calories));
-  set('am-log-preview-total', `${Math.round(m.calories)} kcal · ×${_logMultiplier}`);
+  if (preview) preview.style.display = 'block';
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('am-prev-p', totalP.toFixed(0));
+  set('am-prev-c', totalC.toFixed(0));
+  set('am-prev-f', totalF.toFixed(0));
+  set('am-prev-k', Math.round(totalK));
+  set('am-log-preview-total', `${Math.round(totalK)} kcal · ${_logRows.filter(r => mealById(r.mealId)).length} item${_logRows.length > 1 ? 's' : ''}`);
 }
 
 // Best-effort multiplier inference for edit mode: compare logged item qtys against the
 // source meal's items. If qty ratios are consistent, that's the multiplier; else default 1.
 function inferMultiplierForLog(loggedMeal) {
   if (!loggedMeal.sourceMealId) return 1;
-  const src = (() => {
-    if (loggedMeal.sourceMealId.startsWith('preset:')) {
-      const n = loggedMeal.sourceMealId.slice('preset:'.length);
-      return PRESET_MEALS.find(pm => pm.name === n);
-    }
-    return (savedMeals || []).find(m => m.id === loggedMeal.sourceMealId);
-  })();
+  const src = mealById(loggedMeal.sourceMealId);
   if (!src || !src.items || !src.items.length) return 1;
   const ratios = [];
   loggedMeal.items.forEach(li => {
@@ -2679,7 +2725,6 @@ function inferMultiplierForLog(loggedMeal) {
   });
   if (!ratios.length) return 1;
   const avg = ratios.reduce((a, b) => a + b, 0) / ratios.length;
-  // Sanity: ratios all close to each other
   const allClose = ratios.every(r => Math.abs(r - avg) < 0.01);
   return allClose ? Math.round(avg * 10) / 10 : 1;
 }
@@ -2775,11 +2820,24 @@ function renderSelected(prefix) {
     const m = macrosFor(item.foodId, item.qty);
     return `<div class="selected-row">
       <div class="sr-name">${escapeHtml(f.name)}<span class="sr-serving">${escapeHtml(f.serving)}</span></div>
-      <input type="number" class="sr-qty" value="${item.qty}" min="0.25" step="0.25" onchange="updateQty(${idx},'${prefix}',this.value)" onclick="event.stopPropagation()"/>
+      <div class="qty-stepper">
+        <button type="button" class="qty-step-btn" onclick="event.stopPropagation();stepQty(${idx},'${prefix}',-1)" aria-label="Decrease">−</button>
+        <input type="number" class="sr-qty qty-step-val" value="${item.qty}" min="0" step="any" onchange="updateQty(${idx},'${prefix}',this.value)" onclick="event.stopPropagation()" inputmode="decimal"/>
+        <button type="button" class="qty-step-btn" onclick="event.stopPropagation();stepQty(${idx},'${prefix}',1)" aria-label="Increase">+</button>
+      </div>
       <span class="sr-cal">${Math.round(m.calories)} kcal</span>
       <button class="btn btn-ghost btn-sm sr-del" onclick="removeItem(${idx},'${prefix}')">✕</button>
     </div>`;
   }).join('');
+}
+
+// Stepper helper: +1 or -1 on whole units; keeps fractional values intact when stepping.
+function stepQty(idx, prefix, delta) {
+  const list = prefix === 'am' ? amSelectedItems : cmSelectedItems;
+  if (!list[idx]) return;
+  const next = Math.max(0.25, +(list[idx].qty + delta).toFixed(2));
+  list[idx].qty = next;
+  renderSelected(prefix);
 }
 
 function updateQty(idx, prefix, val) {
@@ -2888,41 +2946,66 @@ function addWebFoodToSelection(webIdx, prefix) {
 
 async function saveMealEntry() {
   const name = document.getElementById('am-meal-name').value.trim();
-  const meal = getMealFromSelect();
-  if (!meal) { toast('Pick a meal from the dropdown'); return; }
-  if (!meal.items || !meal.items.length) { toast('That meal has no ingredients'); return; }
-  const mult = _logMultiplier || 1;
-  // Scale items by multiplier — the logged copy is independent of the source meal
-  // so future edits to the source don't retroactively change historical logs.
-  const scaledItems = meal.items.map(it => ({ foodId: it.foodId, qty: +((it.qty || 0) * mult).toFixed(3) }));
-  const finalName = name || meal.name || 'Meal';
-  const sourceMealId = (() => {
-    const sel = document.getElementById('am-meal-select');
-    return sel ? sel.value : '';
-  })();
+  // Filter to rows that actually have a picked meal
+  const validRows = _logRows.filter(r => {
+    const m = mealById(r.mealId);
+    return m && m.items && m.items.length > 0;
+  });
+  if (!validRows.length) { toast('Pick at least one meal'); return; }
   const date = document.getElementById('log-date').value || todayStr();
   if (!todayLog.meals) todayLog.meals = [];
+
+  // ────── EDIT mode: single entry update ──────
+  // In edit mode, _logRows always has exactly one entry (UI prevents add-another).
+  // Replace todayLog.meals[_editingLogIdx] in place.
   if (_editingLogIdx !== null && todayLog.meals[_editingLogIdx]) {
+    const row = validRows[0];
+    const src = mealById(row.mealId);
+    const scaled = src.items.map(it => ({ foodId: it.foodId, qty: +((it.qty || 0) * row.multiplier).toFixed(3) }));
     const orig = todayLog.meals[_editingLogIdx];
+    const finalName = name || src.name || 'Meal';
     todayLog.meals[_editingLogIdx] = {
-      name: finalName, items: scaledItems, time: orig.time || Date.now(),
-      sourceMealId, multiplier: mult,
+      name: finalName,
+      items: scaled,
+      time: orig.time || Date.now(),
+      sourceMealId: row.mealId,
+      multiplier: row.multiplier,
     };
-  } else {
-    todayLog.meals.push({
-      name: finalName, items: scaledItems, time: Date.now(),
-      sourceMealId, multiplier: mult,
-    });
+    _editingLogIdx = null;
+    await Db.saveLog(currentUser?.uid || 'local', date, todayLog);
+    if (date === homeDate) await loadHomeLog();
+    closeModal('modal-add-meal');
+    invalidateStreaksCache();
+    renderLogPage();
+    renderHome();
+    toast('Meal updated ✓');
+    return;
   }
-  const wasEditing = _editingLogIdx !== null;
-  _editingLogIdx = null;
+
+  // ────── NEW LOG mode: append one entry per row ──────
+  // All entries share the same `name` (group label). `time` is staggered by 1ms so the
+  // list order is stable (rows appear in the order you picked them).
+  const baseTime = Date.now();
+  validRows.forEach((row, i) => {
+    const src = mealById(row.mealId);
+    const scaled = src.items.map(it => ({ foodId: it.foodId, qty: +((it.qty || 0) * row.multiplier).toFixed(3) }));
+    const finalName = name || src.name || 'Meal';
+    todayLog.meals.push({
+      name: finalName,
+      items: scaled,
+      time: baseTime + i,
+      sourceMealId: row.mealId,
+      multiplier: row.multiplier,
+    });
+  });
   await Db.saveLog(currentUser?.uid || 'local', date, todayLog);
   if (date === homeDate) await loadHomeLog();
   closeModal('modal-add-meal');
   invalidateStreaksCache();
   renderLogPage();
   renderHome();
-  toast(wasEditing ? 'Meal updated ✓' : 'Meal logged ✓');
+  const n = validRows.length;
+  toast(n === 1 ? 'Meal logged ✓' : `${n} meals logged ✓`);
 }
 
 async function deleteMealEntry(idx) {
@@ -2937,50 +3020,173 @@ async function deleteMealEntry(idx) {
 }
 
 // ─── Meals page ───────────────────────────────
+// Returns the list of preset meals visible to the current user (filters out hidden ones).
+// hiddenPresets is stored per-user in userProfile.hiddenPresets — a list of preset names
+// that the user has "promoted" to their own meal (so the preset is hidden going forward).
+function visiblePresetMeals() {
+  const hidden = (userProfile && userProfile.hiddenPresets) || [];
+  return PRESET_MEALS.filter(pm => !hidden.includes(pm.name));
+}
+
 function renderMeals() {
-  document.getElementById('preset-meals-list').innerHTML = PRESET_MEALS.map(pm=>{
-    const m=sumMacros(pm.items);
-    return `<div class="meal-card mb-1"><div class="flex-between mb-1"><span style="font-weight:600">${pm.name}</span><button class="btn btn-sm btn-primary" onclick="logPresetMeal(${JSON.stringify(pm).replace(/"/g,'&quot;')})">Log</button></div><div class="macro-row"><div class="macro-pill p"><span class="val" style="font-size:.85rem">${m.protein.toFixed(1)}</span><span class="lbl">P</span></div><div class="macro-pill c"><span class="val" style="font-size:.85rem">${m.carbs.toFixed(1)}</span><span class="lbl">C</span></div><div class="macro-pill f"><span class="val" style="font-size:.85rem">${m.fat.toFixed(1)}</span><span class="lbl">F</span></div><div class="macro-pill k"><span class="val" style="font-size:.85rem">${Math.round(m.calories)}</span><span class="lbl">kcal</span></div></div></div>`;
+  // Preset meals: filter out any the user has promoted to their own copy.
+  // All meals (preset + global + private) get ✏️ Edit buttons. Logic of what happens on
+  // save depends on the source — see editMealFromList() and saveCustomMeal().
+  const presets = visiblePresetMeals();
+  document.getElementById('preset-meals-list').innerHTML = presets.map(pm => {
+    const m = sumMacros(pm.items);
+    const escName = escapeHtml(pm.name);
+    return `<div class="meal-card mb-1">
+      <div class="flex-between mb-1">
+        <span style="font-weight:600">${escName}<span style="font-size:.62rem;background:rgba(212,168,87,0.15);color:var(--accent);padding:.1rem .35rem;border-radius:4px;margin-left:.4rem;letter-spacing:.02em;">PRESET</span></span>
+        <div style="display:flex;gap:.4rem">
+          <button class="btn btn-sm btn-primary" onclick="logPresetMealByName('${encodeURIComponent(pm.name)}')">Log</button>
+          <button class="btn btn-sm btn-ghost" onclick="editMealFromList('preset:${encodeURIComponent(pm.name)}', 'preset')" title="Edit (creates your own copy)">✏️</button>
+        </div>
+      </div>
+      <div class="macro-row"><div class="macro-pill p"><span class="val" style="font-size:.85rem">${m.protein.toFixed(1)}</span><span class="lbl">P</span></div><div class="macro-pill c"><span class="val" style="font-size:.85rem">${m.carbs.toFixed(1)}</span><span class="lbl">C</span></div><div class="macro-pill f"><span class="val" style="font-size:.85rem">${m.fat.toFixed(1)}</span><span class="lbl">F</span></div><div class="macro-pill k"><span class="val" style="font-size:.85rem">${Math.round(m.calories)}</span><span class="lbl">kcal</span></div></div>
+    </div>`;
   }).join('');
+
+  // Show a "restore hidden presets" link if any are hidden — gives users an out.
+  const hiddenCount = ((userProfile && userProfile.hiddenPresets) || []).length;
+  const presetWrap = document.getElementById('preset-meals-list');
+  if (hiddenCount > 0 && presetWrap) {
+    presetWrap.insertAdjacentHTML('beforeend',
+      `<p style="text-align:center;margin-top:.6rem;font-size:.72rem;color:var(--text-muted);">
+         ${hiddenCount} preset${hiddenCount > 1 ? 's' : ''} hidden (replaced by your own version).
+         <a href="#" onclick="restoreHiddenPresets();return false;" style="color:var(--accent);text-decoration:none;">Restore all</a>
+       </p>`);
+  }
+
   const sl = document.getElementById('saved-meals-list');
   if (!savedMeals.length) { sl.innerHTML = '<p class="empty-state">No saved meals yet.</p>'; return; }
-  // Global meals shown with a small badge. Delete button only shown if the user has permission:
-  //   - global meals: only admin can delete
-  //   - private meals: only the owner (which is the only one who sees them anyway)
-  sl.innerHTML = savedMeals.map(sm=>{
-    const m=sumMacros(sm.items);
+
+  // Saved meals: global (admin-curated, all users see) + private (per-user).
+  //   - Edit: admin can edit globals; everyone can edit their own privates.
+  //   - Delete: same permission model.
+  sl.innerHTML = savedMeals.map(sm => {
+    const m = sumMacros(sm.items);
     const isGlobal = sm.source === 'global';
-    const canDelete = isGlobal ? isAdmin() : true;
+    const canModify = isGlobal ? isAdmin() : true;
     const badge = isGlobal
-      ? '<span style="font-size:.65rem;background:rgba(52,168,83,0.15);color:#34a853;padding:.1rem .35rem;border-radius:4px;margin-left:.4rem;letter-spacing:.02em;">SHARED</span>'
+      ? '<span style="font-size:.62rem;background:rgba(52,168,83,0.15);color:#34a853;padding:.1rem .35rem;border-radius:4px;margin-left:.4rem;letter-spacing:.02em;">SHARED</span>'
       : '';
-    const delBtn = canDelete
+    const editBtn = canModify
+      ? `<button class="btn btn-sm btn-ghost" onclick="editMealFromList('${sm.id}', '${isGlobal ? 'global' : 'private'}')" title="Edit">✏️</button>`
+      : '';
+    const delBtn = canModify
       ? `<button class="btn btn-sm btn-ghost" onclick="deleteCustomMeal('${sm.id}', ${isGlobal})">🗑</button>`
       : '';
-    return `<div class="meal-card mb-1"><div class="flex-between mb-1"><span style="font-weight:600">${sm.name}${badge}</span><div style="display:flex;gap:.4rem"><button class="btn btn-sm btn-secondary" onclick="logSavedMeal('${sm.id}')">Log</button>${delBtn}</div></div><div class="macro-row"><div class="macro-pill p"><span class="val" style="font-size:.85rem">${m.protein.toFixed(1)}</span><span class="lbl">P</span></div><div class="macro-pill c"><span class="val" style="font-size:.85rem">${m.carbs.toFixed(1)}</span><span class="lbl">C</span></div><div class="macro-pill f"><span class="val" style="font-size:.85rem">${m.fat.toFixed(1)}</span><span class="lbl">F</span></div><div class="macro-pill k"><span class="val" style="font-size:.85rem">${Math.round(m.calories)}</span><span class="lbl">kcal</span></div></div></div>`;
+    return `<div class="meal-card mb-1">
+      <div class="flex-between mb-1">
+        <span style="font-weight:600">${escapeHtml(sm.name)}${badge}</span>
+        <div style="display:flex;gap:.4rem">
+          <button class="btn btn-sm btn-secondary" onclick="logSavedMeal('${sm.id}')">Log</button>
+          ${editBtn}${delBtn}
+        </div>
+      </div>
+      <div class="macro-row"><div class="macro-pill p"><span class="val" style="font-size:.85rem">${m.protein.toFixed(1)}</span><span class="lbl">P</span></div><div class="macro-pill c"><span class="val" style="font-size:.85rem">${m.carbs.toFixed(1)}</span><span class="lbl">C</span></div><div class="macro-pill f"><span class="val" style="font-size:.85rem">${m.fat.toFixed(1)}</span><span class="lbl">F</span></div><div class="macro-pill k"><span class="val" style="font-size:.85rem">${Math.round(m.calories)}</span><span class="lbl">kcal</span></div></div>
+    </div>`;
   }).join('');
 }
+
+// Log a preset by name. Wrapper that decodes the URL-encoded name from renderMeals.
+async function logPresetMealByName(encName) {
+  const name = decodeURIComponent(encName);
+  const pm = PRESET_MEALS.find(p => p.name === name);
+  if (pm) await logPresetMeal(pm);
+}
+
 async function logPresetMeal(pm) {
   const date = todayStr();
-  if (!todayLog.meals) todayLog.meals=[];
-  todayLog.meals.push({name:pm.name, items:pm.items, time:Date.now()});
-  await Db.saveLog(currentUser?.uid||'local', date, todayLog);
+  if (!todayLog.meals) todayLog.meals = [];
+  todayLog.meals.push({ name: pm.name, items: pm.items, time: Date.now() });
+  await Db.saveLog(currentUser?.uid || 'local', date, todayLog);
   if (date === homeDate) await loadHomeLog();
+  invalidateStreaksCache();
   renderLogPage();
   renderHome();
   toast(`${pm.name} logged ✓`);
 }
 async function logSavedMeal(id) {
-  const sm = savedMeals.find(m=>m.id===id);
+  const sm = savedMeals.find(m => m.id === id);
   if (!sm) return;
   await logPresetMeal(sm);
 }
-function openCreateMealModal() {
-  editingMealId = null;
+
+// ─── Edit dispatcher ──────────────────────────
+// Routes a row's Edit click to the create-meal modal in the right mode:
+//   - source='preset': pre-fill from PRESET_MEALS, mark for conversion (save creates new meal,
+//     hide preset for this user)
+//   - source='global': pre-fill from savedMeals; save updates the global meal in-place (admin only)
+//   - source='private': pre-fill from savedMeals; save updates the private meal in-place
+function editMealFromList(id, source) {
+  let meal = null;
+  if (source === 'preset') {
+    const name = decodeURIComponent(id.replace(/^preset:/, ''));
+    const pm = PRESET_MEALS.find(p => p.name === name);
+    if (!pm) { toast('Preset not found'); return; }
+    meal = { id: '', name: pm.name, items: pm.items, _sourcePresetName: name };
+  } else {
+    meal = (savedMeals || []).find(m => m.id === id);
+    if (!meal) { toast('Meal not found'); return; }
+    // Permission guard mirroring renderMeals
+    if (source === 'global' && !isAdmin()) { toast('Only admin can edit shared meals'); return; }
+  }
+  openCreateMealModal(meal, source);
+}
+
+// Hide all presets the user has promoted (call after a preset → meal save).
+async function hidePresetForUser(presetName) {
+  if (!userProfile) return;
+  userProfile.hiddenPresets = userProfile.hiddenPresets || [];
+  if (!userProfile.hiddenPresets.includes(presetName)) {
+    userProfile.hiddenPresets.push(presetName);
+    await Db.saveProfile(currentUser?.uid || 'local', userProfile);
+  }
+}
+
+async function restoreHiddenPresets() {
+  if (!userProfile) return;
+  userProfile.hiddenPresets = [];
+  await Db.saveProfile(currentUser?.uid || 'local', userProfile);
+  renderMeals();
+  toast('All presets restored');
+}
+// State for the create-meal modal — tracks whether we're converting a preset to a real meal.
+// _cmConvertingPresetName is set ONLY when the source was a preset → save will hide it
+// for this user after writing the new (private or global) meal.
+let _cmConvertingPresetName = null;
+
+function openCreateMealModal(prefillMeal = null, source = 'new') {
   cmSelectedItems = [];
-  document.getElementById('cm-name').value = '';
   document.getElementById('cm-search').value = '';
-  document.getElementById('cm-title').textContent = 'Create Saved Meal';
+  _cmConvertingPresetName = null;
+  if (prefillMeal) {
+    // Pre-fill name + ingredients for edit/conversion flow.
+    document.getElementById('cm-name').value = prefillMeal.name || '';
+    cmSelectedItems = (prefillMeal.items || []).map(it => ({ foodId: it.foodId, qty: it.qty }));
+    if (source === 'preset') {
+      editingMealId = null; // new id will be generated on save
+      _cmConvertingPresetName = prefillMeal._sourcePresetName || prefillMeal.name;
+      document.getElementById('cm-title').textContent = isAdmin()
+        ? 'Customize preset (saves as a Shared Meal)'
+        : 'Customize preset (saves as Your Meal)';
+    } else if (source === 'global') {
+      editingMealId = prefillMeal.id;       // keep the id so we overwrite the same global doc
+      document.getElementById('cm-title').textContent = 'Edit Shared Meal';
+    } else {
+      // private
+      editingMealId = prefillMeal.id;
+      document.getElementById('cm-title').textContent = 'Edit Saved Meal';
+    }
+  } else {
+    // Brand-new meal flow
+    editingMealId = null;
+    document.getElementById('cm-name').value = '';
+    document.getElementById('cm-title').textContent = 'Create Saved Meal';
+  }
   renderFoodList('cm-food-list', 'cm');
   renderSelected('cm');
   openModal('modal-create-meal');
@@ -2989,10 +3195,16 @@ async function saveCustomMeal() {
   const name = document.getElementById('cm-name').value.trim();
   if (!name) { toast('Enter a meal name'); return; }
   if (!cmSelectedItems.length) { toast('Add at least one food'); return; }
-  const uid = currentUser?.uid||'local';
-  const meal = { id: editingMealId || `m_${Date.now()}`, name, items:[...cmSelectedItems] };
+  const uid = currentUser?.uid || 'local';
+  const meal = { id: editingMealId || `m_${Date.now()}`, name, items: [...cmSelectedItems] };
   try {
     await Db.saveMeal(uid, meal);
+    // If this save was a preset-conversion, hide the original preset for this user.
+    // Their new meal (private or global) replaces it in the Meals page from now on.
+    if (_cmConvertingPresetName) {
+      await hidePresetForUser(_cmConvertingPresetName);
+      _cmConvertingPresetName = null;
+    }
     savedMeals = await Db.getMeals(uid);
     renderMeals();
     closeModal('modal-create-meal');
@@ -3588,7 +3800,11 @@ function renderVoiceDraftList() {
       const m = macrosFor(it.foodId, it.qty);
       return `<div class="selected-row">
         <div class="sr-name">${escapeHtml(f.name)}<span class="sr-serving">${escapeHtml(f.serving)}</span></div>
-        <input type="number" class="sr-qty" value="${it.qty}" min="0.25" step="0.25" onchange="updateVoiceDraftQty(${idx},this.value)" onclick="event.stopPropagation()"/>
+        <div class="qty-stepper">
+          <button type="button" class="qty-step-btn" onclick="event.stopPropagation();stepVoiceDraftQty(${idx},-1)" aria-label="Decrease">−</button>
+          <input type="number" class="sr-qty qty-step-val" value="${it.qty}" min="0" step="any" onchange="updateVoiceDraftQty(${idx},this.value)" onclick="event.stopPropagation()" inputmode="decimal"/>
+          <button type="button" class="qty-step-btn" onclick="event.stopPropagation();stepVoiceDraftQty(${idx},1)" aria-label="Increase">+</button>
+        </div>
         <span class="sr-cal">${Math.round(m.calories)} kcal</span>
         <button class="btn btn-ghost btn-sm sr-del" onclick="removeVoiceDraftItem(${idx})">✕</button>
       </div>`;
@@ -3606,6 +3822,12 @@ function renderVoiceDraftList() {
 function updateVoiceDraftQty(idx, val) {
   if (!_voiceDraftItems[idx]) return;
   _voiceDraftItems[idx].qty = Math.max(0.25, +val || 0.25);
+  renderVoiceDraftList();
+}
+
+function stepVoiceDraftQty(idx, delta) {
+  if (!_voiceDraftItems[idx]) return;
+  _voiceDraftItems[idx].qty = Math.max(0.25, +(_voiceDraftItems[idx].qty + delta).toFixed(2));
   renderVoiceDraftList();
 }
 
