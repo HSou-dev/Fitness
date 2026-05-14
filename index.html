@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-05-14-13"/>
+<meta name="app-version" content="2026-05-14-14"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -540,6 +540,16 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
           <div style="font-size:.95rem;color:var(--ink);font-weight:600;" id="home-streak-fast-val">— days</div>
         </div>
       </div>
+</div>
+
+    <!-- Water tracker: compact horizontal card with glass count and quick +1 button -->
+    <div class="card" style="margin-top:1rem;padding:.7rem .8rem;display:flex;align-items:center;gap:.8rem;cursor:pointer;" onclick="showPage('log');setNav('log');">
+      <div style="width:36px;height:36px;border-radius:50%;background:rgba(64,158,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">💧</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.72rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Water today</div>
+        <div style="font-size:.95rem;color:var(--ink);font-weight:600;" id="home-water-val">— glasses</div>
+      </div>
+      <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();quickAddWater();" style="flex-shrink:0;font-size:.75rem;padding:.3rem .65rem;">+1</button>
     </div>
 
     <div class="cal-ring-section mt-2">
@@ -602,7 +612,19 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
     <span class="topbar-title">Diet Log</span>
     <input type="date" id="log-date" style="width:auto;padding:.4rem .7rem;font-size:.82rem"/>
   </div>
-  <div class="log-content">
+<div class="log-content">
+    <!-- Water log: continuous +/- with current count, mirrors home card but with controls -->
+    <div class="card mb-2" style="padding:.9rem;display:flex;align-items:center;gap:.8rem;">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(64,158,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.4rem;">💧</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.72rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Water</div>
+        <div style="font-size:1.15rem;color:var(--ink);font-weight:600;font-family:var(--mono,monospace);" id="log-water-val">0 glasses</div>
+      </div>
+      <div style="display:flex;gap:.35rem;align-items:center;flex-shrink:0;">
+        <button class="btn btn-sm btn-secondary" onclick="adjustWater(-1)" style="min-width:36px;font-size:1rem;line-height:1;padding:.4rem 0;" aria-label="Remove one glass">−</button>
+        <button class="btn btn-sm btn-primary" onclick="adjustWater(1)" style="min-width:36px;font-size:1rem;line-height:1;padding:.4rem 0;" aria-label="Add one glass">+</button>
+      </div>
+    </div>
     <div class="card mb-2">
       <p class="section-title" style="margin-top:0">Daily Totals</p>
       <div class="macro-row">
@@ -1506,6 +1528,22 @@ const Db = {
       return [];
     }
   },
+  // ─── Water tracking ────────────────────────────
+  // Stored as a single number per day inside the same log doc, alongside meals.
+  // Keeps everything for a date in one Firestore read.
+  async getWater(uid, date) {
+    const log = await Db.getLog(uid, date);
+    return Number(log?.water || 0);
+  },
+  async setWater(uid, date, glasses) {
+    if (!_db) {
+      const all = localGet('logs') || {};
+      all[date] = { ...(all[date] || {}), water: glasses };
+      localSet('logs', all);
+      return;
+    }
+    await _db.doc(`users/${uid}/logs/${date}`).set({ water: glasses }, { merge: true });
+  },
   async deleteCompletedFast(uid, startTs) {
     if (!_db) {
       const list = (localGet('fast_history') || []).filter(f => f.startTs !== startTs);
@@ -1645,8 +1683,9 @@ async function afterLogin() {
       userProfile.globalMealsMigrated = true;
       await Db.saveProfile(uid, userProfile);
     }
-    savedMeals = await Db.getMeals(uid);
+savedMeals = await Db.getMeals(uid);
     await loadFastState();
+    await loadWaterToday();
     showPage('home');
     showNav();
     wireHomeDateNav();
@@ -2304,6 +2343,40 @@ function renderHome() {
 }
 
 // Async refresh of the two streak badges. Doesn't block renderHome.
+// ─── Water tracking ──────────────────────────
+// Single number per day, stored in users/{uid}/logs/{date}.water.
+// Home page shows a read-only count + quick +1; Log page has full +/- controls.
+let _waterToday = 0;
+const WATER_DEFAULT_GOAL = 8; // optional: display "5 / 8 glasses" — tweak later if you want
+
+async function loadWaterToday() {
+  const uid = currentUser?.uid || 'local';
+  _waterToday = await Db.getWater(uid, todayStr());
+  refreshWaterDisplays();
+}
+
+function refreshWaterDisplays() {
+  const homeEl = document.getElementById('home-water-val');
+  if (homeEl) homeEl.textContent = `${_waterToday} glass${_waterToday === 1 ? '' : 'es'}`;
+  const logEl = document.getElementById('log-water-val');
+  if (logEl) logEl.textContent = `${_waterToday} glass${_waterToday === 1 ? '' : 'es'}`;
+}
+
+async function adjustWater(delta) {
+  const next = Math.max(0, _waterToday + delta);
+  if (next === _waterToday) return;
+  _waterToday = next;
+  refreshWaterDisplays(); // optimistic update for snappy UI
+  try {
+    const uid = currentUser?.uid || 'local';
+    await Db.setWater(uid, todayStr(), _waterToday);
+  } catch (e) {
+    console.error('[NutriLog] adjustWater failed:', e);
+    toast('Save failed');
+  }
+}
+
+function quickAddWater() { adjustWater(1); }  
 async function refreshHomeStreaks() {
   const elDiet = document.getElementById('home-streak-diet-val');
   const elFast = document.getElementById('home-streak-fast-val');
@@ -2424,6 +2497,7 @@ async function loadTodayLog(date=todayStr()) {
   if (!todayLog.meals) todayLog.meals = [];
 }
 function renderLogPage() {
+  refreshWaterDisplays();
   const t = todayTotals();
   document.getElementById('day-p').textContent = t.protein.toFixed(1);
   document.getElementById('day-c').textContent = t.carbs.toFixed(1);
