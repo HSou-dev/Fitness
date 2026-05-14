@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-05-14-12"/>
+<meta name="app-version" content="2026-05-14-13"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -1931,7 +1931,9 @@ function refreshFastHomeCard() {
   const ctaCard = document.getElementById('home-fast-cta');
   if (!activeCard || !ctaCard) return;
   if (_fastState) {
-    activeCard.style.display = '';
+    // iOS Safari (especially in PWA mode) doesn't reliably restore `display` to its default
+    // when set to empty string — it can retain the previous `none`. Always set an explicit value.
+    activeCard.style.display = 'block';
     ctaCard.style.display = 'none';
     const prog = _fastProgress();
     const arc = document.getElementById('home-fast-arc');
@@ -1951,7 +1953,7 @@ function refreshFastHomeCard() {
     }
   } else {
     activeCard.style.display = 'none';
-    ctaCard.style.display = '';
+    ctaCard.style.display = 'block';
   }
 }
 
@@ -1965,7 +1967,7 @@ function refreshFastPageActiveCard() {
   const idleCard = document.getElementById('fast-idle-card');
   if (!activeCard || !idleCard) return;
   if (_fastState) {
-    activeCard.style.display = '';
+    activeCard.style.display = 'block';
     idleCard.style.display = 'none';
     const prog = _fastProgress();
     const arc = document.getElementById('fast-ring-arc');
@@ -1983,7 +1985,7 @@ function refreshFastPageActiveCard() {
     document.getElementById('fast-started-text').textContent = `Started ${start.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
   } else {
     activeCard.style.display = 'none';
-    idleCard.style.display = '';
+    idleCard.style.display = 'block';
     // Reflect _fastSelectedTargetH on chips
     document.querySelectorAll('.fast-target-chip').forEach(chip => {
       const v = Number(chip.dataset.h);
