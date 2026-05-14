@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-05-14-5"/>
+<meta name="app-version" content="2026-05-14-6"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -90,10 +90,10 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
 .macro-pill.k .val { color: var(--calories); }
 .progress-bar { height: 6px; background: var(--surface2); border-radius: 999px; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 999px; transition: width .5s cubic-bezier(.4,0,.2,1); }
-#main-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(24,28,36,.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: none; grid-template-columns: repeat(5,1fr); z-index: 100; padding-bottom: env(safe-area-inset-bottom, 0); }
+#main-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(24,28,36,.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: none; grid-template-columns: repeat(6,1fr); z-index: 100; padding-bottom: env(safe-area-inset-bottom, 0); }
 #main-nav.visible { display: grid; }
-.nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: .7rem .5rem; background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: .65rem; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; transition: color var(--transition); }
-.nav-btn svg { width: 20px; height: 20px; }
+.nav-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: .65rem .2rem; background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: .58rem; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; transition: color var(--transition); white-space: nowrap; min-width: 0; }
+.nav-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 .nav-btn.active { color: var(--accent); }
 .has-nav { padding-bottom: calc(90px + env(safe-area-inset-bottom, 0)); }
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 1.2rem .6rem; }
