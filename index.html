@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-05-14-8"/>
+<meta name="app-version" content="2026-05-14-10"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -3921,12 +3921,12 @@ if ('serviceWorker' in navigator) {
 // ---- Explicit auto-update banner ----
 // This is layered on top of the SW. Even if the SW caches kick in differently
 // (especially on iOS Safari), this gives the user a visible "Refresh now" CTA.
-// Reads the version from the <meta name="app-version"> tag, polls version.json
-// next to the page, and shows the banner when versions don't match.
+// Reads the version from the <meta name="app-version"> tag, fetches the live index.html
+// from the server, scrapes its meta tag, and shows the banner when versions don't match.
+// Single source of truth: just bump the meta tag — no companion file to keep in sync.
 (function () {
   const APP_VERSION = (document.querySelector('meta[name="app-version"]')?.content || '').trim();
   if (!APP_VERSION) return;       // nothing to compare against
-  const AUTO_UPDATE_URL = 'version.json';
   const AUTO_UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;   // 5 minutes
   const banner = document.getElementById('updateBanner');
   const subEl = document.getElementById('updSub');
@@ -3981,15 +3981,20 @@ if ('serviceWorker' in navigator) {
 
   const checkForUpdate = async () => {
     try {
-      // Cache-busting query string + cache: 'no-store' = always fresh
-      const url = AUTO_UPDATE_URL + (AUTO_UPDATE_URL.includes('?') ? '&' : '?') + '_=' + Date.now();
+      // Single source of truth: read the version directly from the live index.html.
+      // No version.json needed. Cache-busting query + no-store guarantees a fresh fetch
+      // (service worker is also network-first for HTML, so it won't intercept this).
+      const url = 'index.html?_=' + Date.now();
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) return;
-      const data = await res.json();
-      const remoteVer = (data && (data.version || data.v)) || null;
+      const html = await res.text();
+      // Match: <meta name="app-version" content="YYYY-MM-DD-N"/> (single or double quotes, any order)
+      const m = html.match(/<meta[^>]*name=["']app-version["'][^>]*content=["']([^"']+)["']/i)
+            || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']app-version["']/i);
+      const remoteVer = m && m[1] && m[1].trim();
       if (remoteVer && remoteVer !== APP_VERSION) showBanner(remoteVer);
     } catch (e) {
-      // Silent — offline, or version.json not yet published
+      // Silent — offline or fetch failed
     }
   };
 
