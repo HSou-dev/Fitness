@@ -17,7 +17,7 @@
 // updates instant.
 // ─────────────────────────────────────────────────────────────────
 
-const SW_VERSION = '2026-05-14-5';   // ← bump this after each push for instant updates
+const SW_VERSION = '2026-05-14-6';   // ← bump this after each push for instant updates
 const CACHE_NAME = `nutrilog-${SW_VERSION}`;
 
 // Files we want available even when fully offline. The HTML itself is
