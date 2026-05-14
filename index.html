@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-05-14-10"/>
+<meta name="app-version" content="2026-05-14-11"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -1459,6 +1459,14 @@ const Db = {
       return [];
     }
   },
+  async deleteCompletedFast(uid, startTs) {
+    if (!_db) {
+      const list = (localGet('fast_history') || []).filter(f => f.startTs !== startTs);
+      localSet('fast_history', list);
+      return;
+    }
+    await _db.doc(`users/${uid}/fasts/${String(startTs)}`).delete();
+  },
 };
 
 // Admin who can write to the shared global ingredient library.
@@ -2028,13 +2036,30 @@ async function refreshFastHistoryList() {
     const dateLbl = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     const startTime = start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     const endTime = end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);">
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);gap:.6rem;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:.85rem;color:var(--ink);font-weight:500;">${dateLbl} · ${f.actualHours}h${reached ? ' <span style="color:#34a853;font-size:.72rem;">✓</span>' : ''}</div>
         <div style="font-size:.72rem;color:var(--text-muted);">${startTime} → ${endTime} · target ${f.targetHours}h</div>
       </div>
+      <button class="btn btn-sm btn-ghost" style="padding:.3rem .55rem;font-size:.78rem;flex-shrink:0;" onclick="deleteFastHistoryEntry(${f.startTs})" title="Delete this entry">🗑</button>
     </div>`;
   }).join('');
+}
+
+// Delete a logged fast from history (for accidental entries).
+async function deleteFastHistoryEntry(startTs) {
+  if (!window.confirm('Delete this fast from history? This cannot be undone.')) return;
+  const uid = currentUser?.uid || 'local';
+  try {
+    await Db.deleteCompletedFast(uid, startTs);
+    invalidateStreaksCache();
+    refreshFastHistoryList();
+    refreshHomeStreaks();
+    toast('Fast removed from history');
+  } catch (e) {
+    console.error('[NutriLog] deleteFastHistoryEntry failed:', e);
+    toast('Delete failed: ' + (e?.message || 'unknown error'));
+  }
 }
 
 // ─── Home render ──────────────────────────────
