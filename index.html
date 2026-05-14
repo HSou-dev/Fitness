@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-05-07-1"/>
+<meta name="app-version" content="2026-05-14-5"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -447,6 +447,60 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
     </div>
   </div>
   <div style="padding:0 1.2rem">
+    <!-- Fasting status card: compact horizontal card. Only shown when relevant. -->
+    <div id="home-fast-card" class="card" style="display:none;margin-top:1rem;padding:.8rem;cursor:pointer;" onclick="showPage('fast');setNav('fast');renderFastPage();">
+      <div style="display:flex;align-items:center;gap:.9rem;">
+        <div style="position:relative;width:54px;height:54px;flex-shrink:0;">
+          <svg width="54" height="54" viewBox="0 0 54 54">
+            <circle cx="27" cy="27" r="22" fill="none" stroke="var(--border)" stroke-width="5"/>
+            <circle id="home-fast-arc" cx="27" cy="27" r="22" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-dasharray="138" stroke-dashoffset="138" transform="rotate(-90 27 27)" style="transition:stroke-dashoffset .6s ease,stroke .3s ease"/>
+          </svg>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:.7rem;font-weight:600;color:var(--ink);" id="home-fast-pct">0%</div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.88rem;color:var(--ink);font-weight:500;" id="home-fast-status">Fasting</div>
+          <div style="font-size:.75rem;color:var(--text-muted);" id="home-fast-detail">— remaining</div>
+        </div>
+        <svg width="16" height="16" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+    <!-- "Start a fast" CTA (alternative state when no active fast) -->
+    <div id="home-fast-cta" class="card" style="display:none;margin-top:1rem;padding:.7rem .8rem;cursor:pointer;" onclick="showPage('fast');setNav('fast');renderFastPage();">
+      <div style="display:flex;align-items:center;gap:.7rem;">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(212,168,87,0.1);border:1px dashed var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.85rem;color:var(--ink);font-weight:500;">Track an intermittent fast</div>
+          <div style="font-size:.72rem;color:var(--text-muted);">Tap to start</div>
+        </div>
+        <svg width="14" height="14" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <!-- Streaks: two compact pills shown side by side. Render is async so the cards may
+         appear empty for the first frame and fill in once data loads. -->
+    <div id="home-streaks-row" style="display:flex;gap:.6rem;margin-top:.8rem;">
+      <div id="home-streak-diet" class="card" style="flex:1;padding:.7rem .8rem;display:flex;align-items:center;gap:.6rem;cursor:pointer;" onclick="showPage('trends');setNav('trends');renderTrends();">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(212,168,87,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="font-size:1.2rem;">🔥</span>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.72rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Diet streak</div>
+          <div style="font-size:.95rem;color:var(--ink);font-weight:600;" id="home-streak-diet-val">— days</div>
+        </div>
+      </div>
+      <div id="home-streak-fast" class="card" style="flex:1;padding:.7rem .8rem;display:flex;align-items:center;gap:.6rem;cursor:pointer;" onclick="showPage('trends');setNav('trends');renderTrends();">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(52,168,83,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="font-size:1.2rem;">⏱️</span>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.72rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Fast streak</div>
+          <div style="font-size:.95rem;color:var(--ink);font-weight:600;" id="home-streak-fast-val">— days</div>
+        </div>
+      </div>
+    </div>
+
     <div class="cal-ring-section mt-2">
       <div class="bmi-ring-wrap">
         <div class="bmi-ring" id="cal-ring-wrap">
@@ -539,10 +593,103 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
   </div>
 </section>
 
+<!-- FAST -->
+<section class="page has-nav" id="page-fast">
+  <div class="topbar">
+    <span class="topbar-title">Intermittent Fast</span>
+  </div>
+  <div style="padding:0 1.2rem 1rem;">
+    <!-- Active state: shown when there's a fast in progress -->
+    <div id="fast-active-card" class="card mb-2" style="display:none;">
+      <div style="text-align:center;">
+        <div style="position:relative;width:200px;height:200px;margin:0 auto .8rem;">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="86" fill="none" stroke="var(--border)" stroke-width="14"/>
+            <circle id="fast-ring-arc" cx="100" cy="100" r="86" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="540" stroke-dashoffset="540" transform="rotate(-90 100 100)" style="transition:stroke-dashoffset .6s ease,stroke .3s ease"/>
+          </svg>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+            <div id="fast-elapsed" style="font-size:1.8rem;font-weight:600;font-family:var(--mono,monospace);color:var(--ink);">0h 00m</div>
+            <div id="fast-pct" style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem;">0%</div>
+          </div>
+        </div>
+        <p id="fast-status-text" style="font-size:.95rem;color:var(--ink);margin:0 0 .2rem;">Fasting</p>
+        <p id="fast-target-text" style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">Goal: 16h</p>
+        <p id="fast-started-text" style="font-size:.72rem;color:var(--text-muted);margin:0 0 1rem;">Started —</p>
+        <button class="btn btn-primary" onclick="breakFast()" style="min-width:160px;">Break Fast</button>
+      </div>
+    </div>
+
+    <!-- Idle state: start a new fast -->
+    <div id="fast-idle-card" class="card mb-2" style="display:none;">
+      <div style="text-align:center;">
+        <div style="width:80px;height:80px;margin:0 auto 1rem;background:rgba(212,168,87,0.1);border:2px dashed var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+          <svg width="32" height="32" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <p style="font-size:.95rem;color:var(--ink);margin:0 0 .4rem;">No active fast</p>
+        <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 1rem;">Choose a target and start your fast.</p>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.8rem;">
+          <button type="button" class="btn btn-sm btn-secondary fast-target-chip" data-h="12" onclick="setFastTarget(12)">12h</button>
+          <button type="button" class="btn btn-sm btn-secondary fast-target-chip" data-h="14" onclick="setFastTarget(14)">14h</button>
+          <button type="button" class="btn btn-sm btn-primary fast-target-chip" data-h="16" onclick="setFastTarget(16)">16h</button>
+          <button type="button" class="btn btn-sm btn-secondary fast-target-chip" data-h="18" onclick="setFastTarget(18)">18h</button>
+          <button type="button" class="btn btn-sm btn-secondary fast-target-chip" data-h="20" onclick="setFastTarget(20)">20h</button>
+          <button type="button" class="btn btn-sm btn-secondary fast-target-chip" data-h="24" onclick="setFastTarget(24)">24h</button>
+        </div>
+        <div style="display:flex;gap:.4rem;align-items:center;justify-content:center;margin-bottom:1rem;">
+          <span style="font-size:.78rem;color:var(--text-muted);">or custom:</span>
+          <input type="number" id="fast-custom-h" min="1" max="72" step="0.5" placeholder="e.g. 17" style="width:80px;padding:.4rem .6rem;font-size:.85rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;text-align:center;" oninput="onFastCustomInput(this.value)"/>
+          <span style="font-size:.78rem;color:var(--text-muted);">hours</span>
+        </div>
+        <button class="btn btn-primary" onclick="startFast()" style="min-width:160px;">Start Fast</button>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="flex-between mb-1"><h3 style="font-size:.95rem;margin:0;">Recent fasts</h3><span class="text-muted" style="font-size:.72rem;" id="fast-history-count"></span></div>
+      <div id="fast-history-list"><p class="empty-state">No completed fasts yet.</p></div>
+    </div>
+  </div>
+</section>
+
 <!-- TRENDS -->
 <section class="page has-nav" id="page-trends">
   <div class="topbar"><span class="topbar-title">Trends</span></div>
   <div style="padding:0 1.2rem 1rem;">
+    <!-- Streaks: detailed view with current + best for both diet and fast -->
+    <div class="card mb-2">
+      <div class="flex-between mb-2"><h3 style="margin:0;">Streaks</h3><span class="text-muted" style="font-size:.72rem;" id="trends-streak-note">—</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+        <div style="padding:.8rem;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
+            <span style="font-size:1.3rem;">🔥</span>
+            <span style="font-size:.75rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Diet</span>
+          </div>
+          <div style="font-size:1.6rem;font-weight:700;color:var(--ink);font-family:var(--mono,monospace);" id="trends-streak-diet-curr">—</div>
+          <div style="font-size:.72rem;color:var(--text-muted);margin-top:.15rem;" id="trends-streak-diet-sub">current</div>
+          <div style="margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border);">
+            <div style="font-size:.72rem;color:var(--text-muted);">Best ever</div>
+            <div style="font-size:1.05rem;font-weight:600;color:var(--ink);" id="trends-streak-diet-best">— days</div>
+          </div>
+        </div>
+        <div style="padding:.8rem;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
+            <span style="font-size:1.3rem;">⏱️</span>
+            <span style="font-size:.75rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Fast</span>
+          </div>
+          <div style="font-size:1.6rem;font-weight:700;color:var(--ink);font-family:var(--mono,monospace);" id="trends-streak-fast-curr">—</div>
+          <div style="font-size:.72rem;color:var(--text-muted);margin-top:.15rem;">current</div>
+          <div style="margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border);">
+            <div style="font-size:.72rem;color:var(--text-muted);">Best ever</div>
+            <div style="font-size:1.05rem;font-weight:600;color:var(--ink);" id="trends-streak-fast-best">— days</div>
+          </div>
+        </div>
+      </div>
+      <p class="text-muted" style="font-size:.7rem;margin:.7rem 0 0;">
+        Diet: days within ±10% of calorie goal. Fast: days with a completed fast of ≥14h.
+      </p>
+    </div>
+
     <div class="card mb-2">
       <div class="flex-between mb-1"><h3>Calorie intake</h3><span class="text-muted" id="trend-cal-range">Last 7 days</span></div>
       <div style="position:relative;height:200px;width:100%;"><canvas id="chart-calories"></canvas></div>
@@ -629,6 +776,10 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.5-1.5 4.5-3.5 5.4V20h-3v-7.6C8.5 11.5 7 9.5 7 7a5 5 0 015-5z"/></svg>
     Meals
   </button>
+  <button class="nav-btn" id="nav-fast" onclick="showPage('fast');setNav('fast');renderFastPage()">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Fast
+  </button>
   <button class="nav-btn" id="nav-trends" onclick="showPage('trends');setNav('trends');renderTrends()">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
     Trends
@@ -642,48 +793,53 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
 <!-- MODALS -->
 <div class="modal-overlay" id="modal-add-meal">
   <div class="modal-sheet">
-    <div class="flex-between mb-2"><h3>Add a Meal</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-add-meal')">✕</button></div>
+    <div class="flex-between mb-2"><h3>Log a Meal</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-add-meal')">✕</button></div>
 
-    <!-- Step 1: meal name -->
-    <div class="field" style="margin-bottom:1rem;">
-      <label>Meal Name</label>
+    <!-- Name (e.g. Breakfast, Post-workout) -->
+    <div class="field" style="margin-bottom:.9rem;">
+      <label>Name</label>
       <input type="text" id="am-meal-name" placeholder="e.g. Breakfast, Post-workout, Snack…"/>
     </div>
 
-    <!-- Selected ingredients (running total at top) -->
-    <div id="am-selected-wrap" style="display:none;margin-bottom:1rem;">
-      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;margin:0 0 .5rem;">
-        <span>Ingredients (<span id="am-selected-count">0</span>)</span>
-        <span id="am-running-total" style="color:var(--accent);font-weight:600;text-transform:none;letter-spacing:0;font-size:.78rem;">0 kcal</span>
+    <!-- Meal picker -->
+    <div class="field" style="margin-bottom:.9rem;">
+      <label>What did you eat?</label>
+      <select id="am-meal-select" style="width:100%;padding:.55rem .7rem;font-size:.92rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;"></select>
+    </div>
+
+    <!-- Serving multiplier -->
+    <div class="field" style="margin-bottom:.9rem;">
+      <label>Serving size</label>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+        <button type="button" class="btn btn-sm btn-secondary am-mult-chip" data-mult="0.5" onclick="setLogMultiplier(0.5)">×0.5</button>
+        <button type="button" class="btn btn-sm btn-primary am-mult-chip" data-mult="1" onclick="setLogMultiplier(1)">×1</button>
+        <button type="button" class="btn btn-sm btn-secondary am-mult-chip" data-mult="1.5" onclick="setLogMultiplier(1.5)">×1.5</button>
+        <input type="number" id="am-mult-custom" value="1" min="0.1" step="0.1" style="flex:1;max-width:90px;padding:.4rem .6rem;font-size:.85rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;text-align:center;" oninput="onLogMultCustomInput(this.value)"/>
       </div>
-      <div id="am-selected"></div>
     </div>
 
-    <!-- Step 2: search -->
-    <div class="section-title" style="margin:.6rem 0 .4rem;display:flex;align-items:center;justify-content:space-between;">
-      <span>Add ingredients</span>
-      <button class="btn btn-sm btn-secondary" id="am-mic-btn" onclick="startVoiceLog()" style="font-size:.7rem;padding:.3rem .7rem;">
-        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:.25rem;"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
-        Voice
-      </button>
+    <!-- Live preview of what gets logged -->
+    <div id="am-log-preview" style="background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:.8rem;margin-bottom:.9rem;display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+        <span style="font-size:.78rem;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;">Will log</span>
+        <span id="am-log-preview-total" style="color:var(--accent);font-weight:600;font-size:.82rem;"></span>
+      </div>
+      <div class="macro-row" id="am-log-preview-macros">
+        <div class="macro-pill p"><span class="val" id="am-prev-p">0</span><span class="lbl">P</span></div>
+        <div class="macro-pill c"><span class="val" id="am-prev-c">0</span><span class="lbl">C</span></div>
+        <div class="macro-pill f"><span class="val" id="am-prev-f">0</span><span class="lbl">F</span></div>
+        <div class="macro-pill k"><span class="val" id="am-prev-k">0</span><span class="lbl">kcal</span></div>
+      </div>
     </div>
-    <div class="search-wrap mb-1">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input type="text" id="am-search" placeholder="Search 'paneer', 'milk', 'roti'…" oninput="filterFoods(this.value)"/>
-    </div>
-    <div class="food-list" id="am-food-list"></div>
 
-    <!-- Web search fallback -->
-    <button class="btn btn-secondary btn-full mt-1" id="am-web-search-btn" onclick="searchOpenFoodFacts('am')">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:.3rem;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
-      Can't find it? Search the web
-    </button>
-    <button class="btn btn-ghost btn-full mt-1" onclick="openCustomIngredient('am')" style="font-size:.82rem;">
-      + Add custom ingredient (enter macros yourself)
-    </button>
-    <p class="text-muted mt-1" style="font-size:.72rem;text-align:center;">Web results from Open Food Facts. Custom ingredients save to your library.</p>
+    <!-- Save -->
+    <button class="btn btn-primary btn-full" onclick="saveMealEntry()">Log Meal</button>
 
-    <button class="btn btn-primary btn-full mt-3" onclick="saveMealEntry()">Save Meal</button>
+    <!-- Escape hatch: can't find the meal -->
+    <p style="text-align:center;margin-top:.9rem;padding-top:.8rem;border-top:1px solid var(--border);font-size:.78rem;color:var(--text-muted);">
+      Can't find your meal?
+      <a href="#" onclick="closeModal('modal-add-meal');showPage('meals');return false;" style="color:var(--accent);text-decoration:none;font-weight:500;">Add one in Meals →</a>
+    </p>
   </div>
 </div>
 
@@ -704,7 +860,13 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
       <div id="cm-selected"></div>
     </div>
 
-    <div class="section-title" style="margin:.6rem 0 .4rem;">Add ingredients</div>
+    <div class="section-title" style="margin:.6rem 0 .4rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>Add ingredients</span>
+      <button class="btn btn-sm btn-secondary" id="cm-mic-btn" onclick="startVoiceLog()" style="font-size:.7rem;padding:.3rem .7rem;">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:.25rem;"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        Voice
+      </button>
+    </div>
     <div class="search-wrap mb-1">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
       <input type="text" id="cm-search" placeholder="Search ingredient…" oninput="filterFoodsCM(this.value)"/>
@@ -778,17 +940,32 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
 <!-- Voice Logging Modal -->
 <div class="modal-overlay" id="modal-voice">
   <div class="modal-sheet" style="text-align:center;padding:2rem 1.2rem;">
-    <div class="flex-between mb-2"><h3 style="text-align:left;">Listening…</h3><button class="btn btn-ghost btn-sm" onclick="stopVoiceLog(false)">✕</button></div>
-    <div id="voice-pulse" style="margin:1.2rem auto;width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;animation:pulse 1.2s ease-in-out infinite;">
-      <svg width="36" height="36" fill="none" stroke="#0f1117" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+    <div class="flex-between mb-2"><h3 id="voice-title" style="text-align:left;">Listening…</h3><button class="btn btn-ghost btn-sm" onclick="stopVoiceLog(false)">✕</button></div>
+
+    <!-- Listening state -->
+    <div id="voice-listen-state">
+      <div id="voice-pulse" style="margin:1.2rem auto;width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;animation:pulse 1.2s ease-in-out infinite;">
+        <svg width="36" height="36" fill="none" stroke="#0f1117" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+      </div>
+      <p class="text-muted" style="font-size:.85rem;">Speak slowly and clearly. Try:</p>
+      <p style="font-size:.9rem;color:var(--accent);margin-top:.3rem;">"two eggs and one tablespoon butter"</p>
+      <div id="voice-heard" style="margin-top:1rem;padding:.7rem;background:var(--surface2);border-radius:var(--radius-sm);min-height:2.5rem;font-size:.95rem;border:1px solid var(--border);text-align:left;"></div>
+      <p id="voice-status" class="text-muted" style="font-size:.78rem;margin-top:.6rem;min-height:1.2rem;"></p>
+      <div class="flex-between mt-3" style="gap:.5rem;">
+        <button class="btn btn-secondary" style="flex:1;" onclick="stopVoiceLog(false)">Cancel</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="stopVoiceLog(true)">Done ✓</button>
+      </div>
     </div>
-    <p class="text-muted" style="font-size:.85rem;">Speak slowly and clearly. Try:</p>
-    <p style="font-size:.9rem;color:var(--accent);margin-top:.3rem;">"two roti, one bowl dal, one paneer"</p>
-    <div id="voice-heard" style="margin-top:1rem;padding:.7rem;background:var(--surface2);border-radius:var(--radius-sm);min-height:2.5rem;font-size:.95rem;border:1px solid var(--border);text-align:left;"></div>
-    <p id="voice-status" class="text-muted" style="font-size:.78rem;margin-top:.6rem;min-height:1.2rem;"></p>
-    <div class="flex-between mt-3" style="gap:.5rem;">
-      <button class="btn btn-secondary" style="flex:1;" onclick="stopVoiceLog(false)">Cancel</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="stopVoiceLog(true)">Done ✓</button>
+
+    <!-- Confirmation/review state — appears after Done is tapped. User can fix items before committing. -->
+    <div id="voice-review-state" style="display:none;text-align:left;">
+      <p class="text-muted" style="font-size:.82rem;margin:0 0 .6rem;">Review what we heard. Adjust quantities or remove items, then add them to your meal.</p>
+      <div id="voice-review-list" style="margin-bottom:.8rem;max-height:300px;overflow-y:auto;"></div>
+      <p id="voice-review-unmatched" class="text-muted" style="font-size:.75rem;margin:.4rem 0 .8rem;display:none;"></p>
+      <div class="flex-between" style="gap:.5rem;">
+        <button class="btn btn-secondary" style="flex:1;" onclick="reopenVoiceListening()">↺ Try again</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="commitVoiceDraft()">Add to meal</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1128,22 +1305,32 @@ const Db = {
       localSet('saved_meals', meals);
       return;
     }
-    const ref = meal.id ? _db.doc(`users/${uid}/meals/${meal.id}`) : _db.collection(`users/${uid}/meals`).doc();
-    await ref.set({...meal, id:ref.id}, {merge:true});
+    // Admin → globalMeals (visible to all). Others → users/{uid}/meals (private).
+    const collection = (uid === ADMIN_UID) ? 'globalMeals' : `users/${uid}/meals`;
+    const ref = meal.id ? _db.doc(`${collection}/${meal.id}`) : _db.collection(collection).doc();
+    await ref.set({...meal, id:ref.id, source: (uid === ADMIN_UID) ? 'global' : 'custom'}, {merge:true});
     return ref.id;
   },
   async getMeals(uid) {
     if (!_db) return localGet('saved_meals') || [];
-    const s = await _db.collection(`users/${uid}/meals`).get();
-    return s.docs.map(d=>d.data());
+    // Fetch both global and private meals; merge.
+    const tasks = [
+      _db.collection('globalMeals').get().then(s => s.docs.map(d => ({ ...d.data(), source: 'global' }))).catch(e => { console.warn('[NutriLog] getGlobalMeals failed:', e); return []; }),
+      _db.collection(`users/${uid}/meals`).get().then(s => s.docs.map(d => ({ ...d.data(), source: 'custom' }))).catch(e => { console.warn('[NutriLog] getPrivateMeals failed:', e); return []; }),
+    ];
+    const [globals, privates] = await Promise.all(tasks);
+    // De-dupe by id (in case of stale migration artifacts)
+    const seen = new Set();
+    return [...globals, ...privates].filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
   },
-  async deleteMeal(uid, mealId) {
+  async deleteMeal(uid, mealId, isGlobal) {
     if (!_db) {
       const meals = (localGet('saved_meals')||[]).filter(m=>m.id!==mealId);
       localSet('saved_meals', meals);
       return;
     }
-    await _db.doc(`users/${uid}/meals/${mealId}`).delete();
+    const collection = isGlobal ? 'globalMeals' : `users/${uid}/meals`;
+    await _db.doc(`${collection}/${mealId}`).delete();
   },
 
   // ─── Custom Foods ──────────────────────────
@@ -1192,12 +1379,70 @@ const Db = {
     const collection = isGlobal ? 'globalFoods' : `users/${uid}/foods`;
     await _db.doc(`${collection}/${foodId}`).delete();
   },
+
+  // ─── Intermittent Fasting ─────────────────────
+  // Active fast is a single doc at users/{uid}/state/activeFast.
+  // Completed fasts are individual docs under users/{uid}/fasts/{ts}.
+  async getActiveFast(uid) {
+    if (!_db) return localGet('active_fast');
+    try {
+      const snap = await _db.doc(`users/${uid}/state/activeFast`).get();
+      return snap.exists ? snap.data() : null;
+    } catch (e) { console.warn('[NutriLog] getActiveFast failed:', e); return null; }
+  },
+  async setActiveFast(uid, fast) {
+    if (!_db) return localSet('active_fast', fast);
+    if (fast) await _db.doc(`users/${uid}/state/activeFast`).set(fast);
+    else await _db.doc(`users/${uid}/state/activeFast`).delete();
+  },
+  async addCompletedFast(uid, fast) {
+    if (!_db) {
+      const list = localGet('fast_history') || [];
+      list.unshift(fast);
+      localSet('fast_history', list.slice(0, 100));
+      return;
+    }
+    const id = String(fast.startTs);
+    await _db.doc(`users/${uid}/fasts/${id}`).set(fast);
+  },
+  async getCompletedFasts(uid, limit = 20) {
+    if (!_db) return (localGet('fast_history') || []).slice(0, limit);
+    try {
+      const snap = await _db.collection(`users/${uid}/fasts`).orderBy('startTs', 'desc').limit(limit).get();
+      return snap.docs.map(d => d.data());
+    } catch (e) {
+      console.warn('[NutriLog] getCompletedFasts failed:', e);
+      return [];
+    }
+  },
 };
 
 // Admin who can write to the shared global ingredient library.
 // Anyone else's "Add custom ingredient" stays private to their account.
 const ADMIN_UID = 'hOzb36y3uVPZl28c6WxwUkEunC43';
 function isAdmin() { return currentUser?.uid === ADMIN_UID; }
+
+// One-time migration: copy admin's existing private meals (users/{ADMIN_UID}/meals/*)
+// to the new shared globalMeals/ collection. Originals are NOT deleted (safety).
+// Subsequent runs are no-ops since admin's new meals are written directly to globalMeals/.
+// Marked done via userProfile.globalMealsMigrated so it only runs once.
+async function migrateAdminMealsToGlobal(uid) {
+  if (uid !== ADMIN_UID) return; // safety guard
+  if (!_db) return;             // offline mode — nothing to migrate
+  try {
+    const snap = await _db.collection(`users/${uid}/meals`).get();
+    if (snap.empty) return;
+    const ops = snap.docs.map(d => {
+      const data = d.data();
+      // Force source tag = 'global' so renderMeals shows the SHARED badge.
+      return _db.doc(`globalMeals/${d.id}`).set({ ...data, id: d.id, source: 'global' }, { merge: true });
+    });
+    await Promise.all(ops);
+    console.log(`[NutriLog] Migrated ${snap.size} admin meal(s) to globalMeals/`);
+  } catch (e) {
+    console.warn('[NutriLog] migrateAdminMealsToGlobal failed:', e);
+  }
+}
 function localSet(k,v) { localStorage.setItem('nl_'+k, JSON.stringify(v)); }
 function localGet(k)   { try { return JSON.parse(localStorage.getItem('nl_'+k)); } catch { return null; } }
 
@@ -1252,9 +1497,7 @@ async function handleGoogleAuth(forcePopup = false) {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   // forcePopup overrides redirect — used by the fallback retry link when redirect failed
-  // Only use redirect for iOS in standalone mode (installed PWA). In regular Safari,
-  // popup tends to work — and avoids ITP cookie issues entirely.
-  const useRedirect = isStandalone && !forcePopup;
+  const useRedirect = (isStandalone || isIOS) && !forcePopup;
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
     if (useRedirect) {
@@ -1296,7 +1539,15 @@ async function afterLogin() {
     await loadTodayLog();
     homeDate = todayStr();
     await loadHomeLog();
+    // One-time migration of admin's existing private meals → globalMeals/ so they become
+    // visible to all users. Idempotent: marker stored in user profile.
+    if (isAdmin() && !userProfile.globalMealsMigrated) {
+      await migrateAdminMealsToGlobal(uid);
+      userProfile.globalMealsMigrated = true;
+      await Db.saveProfile(uid, userProfile);
+    }
     savedMeals = await Db.getMeals(uid);
+    await loadFastState();
     showPage('home');
     showNav();
     wireHomeDateNav();
@@ -1518,6 +1769,198 @@ function setNav(id) {
   document.getElementById(`nav-${id}`)?.classList.add('active');
 }
 
+// ─── Intermittent Fasting ─────────────────────
+// Manual start/stop. State lives in Db.activeFast (one doc per user). Completed fasts
+// append to Db.fasts/. A 30s tick refreshes the donut and status text on the Home card
+// and the Fast page while either is visible.
+let _fastState = null;            // { startTs, targetHours } when active
+let _fastSelectedTargetH = 16;    // chip selection in idle UI
+let _fastTickInterval = null;
+
+async function loadFastState() {
+  const uid = currentUser?.uid || 'local';
+  _fastState = await Db.getActiveFast(uid);
+  startFastTickerIfNeeded();
+  refreshFastHomeCard();
+}
+
+function startFastTickerIfNeeded() {
+  if (_fastTickInterval) { clearInterval(_fastTickInterval); _fastTickInterval = null; }
+  if (!_fastState) return;
+  // Tick every 30s — granular enough to feel live without burning battery
+  _fastTickInterval = setInterval(() => {
+    refreshFastHomeCard();
+    // If the Fast page is visible, also refresh its big donut
+    if (document.getElementById('page-fast')?.classList.contains('active')) {
+      refreshFastPageActiveCard();
+    }
+  }, 30000);
+}
+
+// Returns {elapsedMs, totalMs, pct, remainingMs, exceeded}
+function _fastProgress() {
+  if (!_fastState) return null;
+  const elapsedMs = Date.now() - _fastState.startTs;
+  const totalMs = (_fastState.targetHours || 16) * 3600 * 1000;
+  const pct = Math.min(100, (elapsedMs / totalMs) * 100);
+  const remainingMs = totalMs - elapsedMs;
+  return { elapsedMs, totalMs, pct, remainingMs, exceeded: elapsedMs > totalMs };
+}
+
+function _fmtHMS(ms) {
+  if (ms < 0) ms = 0;
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${h}h ${String(m).padStart(2, '0')}m`;
+}
+
+function refreshFastHomeCard() {
+  const activeCard = document.getElementById('home-fast-card');
+  const ctaCard = document.getElementById('home-fast-cta');
+  if (!activeCard || !ctaCard) return;
+  if (_fastState) {
+    activeCard.style.display = '';
+    ctaCard.style.display = 'none';
+    const prog = _fastProgress();
+    const arc = document.getElementById('home-fast-arc');
+    const circ = 2 * Math.PI * 22;       // donut radius 22
+    const offset = circ * (1 - Math.min(prog.pct, 100) / 100);
+    if (arc) {
+      arc.style.strokeDashoffset = offset;
+      arc.style.stroke = prog.exceeded ? '#34a853' : 'var(--accent)';
+    }
+    document.getElementById('home-fast-pct').textContent = `${Math.round(Math.min(prog.pct, 100))}%`;
+    if (prog.exceeded) {
+      document.getElementById('home-fast-status').textContent = 'Goal met!';
+      document.getElementById('home-fast-detail').textContent = `+${_fmtHMS(prog.elapsedMs - prog.totalMs)} past target`;
+    } else {
+      document.getElementById('home-fast-status').textContent = 'Fasting';
+      document.getElementById('home-fast-detail').textContent = `${_fmtHMS(prog.remainingMs)} remaining`;
+    }
+  } else {
+    activeCard.style.display = 'none';
+    ctaCard.style.display = '';
+  }
+}
+
+function renderFastPage() {
+  refreshFastPageActiveCard();
+  refreshFastHistoryList();
+}
+
+function refreshFastPageActiveCard() {
+  const activeCard = document.getElementById('fast-active-card');
+  const idleCard = document.getElementById('fast-idle-card');
+  if (!activeCard || !idleCard) return;
+  if (_fastState) {
+    activeCard.style.display = '';
+    idleCard.style.display = 'none';
+    const prog = _fastProgress();
+    const arc = document.getElementById('fast-ring-arc');
+    const circ = 2 * Math.PI * 86;       // donut radius 86
+    const offset = circ * (1 - Math.min(prog.pct, 100) / 100);
+    if (arc) {
+      arc.style.strokeDashoffset = offset;
+      arc.style.stroke = prog.exceeded ? '#34a853' : 'var(--accent)';
+    }
+    document.getElementById('fast-elapsed').textContent = _fmtHMS(prog.elapsedMs);
+    document.getElementById('fast-pct').textContent = `${Math.round(Math.min(prog.pct, 100))}%`;
+    document.getElementById('fast-status-text').textContent = prog.exceeded ? 'Goal met! Still fasting…' : 'Fasting';
+    document.getElementById('fast-target-text').textContent = `Goal: ${_fastState.targetHours}h`;
+    const start = new Date(_fastState.startTs);
+    document.getElementById('fast-started-text').textContent = `Started ${start.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
+  } else {
+    activeCard.style.display = 'none';
+    idleCard.style.display = '';
+    // Reflect _fastSelectedTargetH on chips
+    document.querySelectorAll('.fast-target-chip').forEach(chip => {
+      const v = Number(chip.dataset.h);
+      if (v === _fastSelectedTargetH) { chip.classList.remove('btn-secondary'); chip.classList.add('btn-primary'); }
+      else { chip.classList.remove('btn-primary'); chip.classList.add('btn-secondary'); }
+    });
+  }
+}
+
+function setFastTarget(h) {
+  _fastSelectedTargetH = h;
+  const customEl = document.getElementById('fast-custom-h');
+  if (customEl) customEl.value = '';
+  refreshFastPageActiveCard();
+}
+
+function onFastCustomInput(val) {
+  const n = Number(val);
+  if (n > 0 && n <= 72) {
+    _fastSelectedTargetH = n;
+    // Clear chip highlights since custom rarely matches
+    document.querySelectorAll('.fast-target-chip').forEach(chip => {
+      chip.classList.remove('btn-primary'); chip.classList.add('btn-secondary');
+    });
+  }
+}
+
+async function startFast() {
+  if (_fastState) { toast('A fast is already in progress'); return; }
+  const targetH = Math.max(0.5, _fastSelectedTargetH || 16);
+  _fastState = { startTs: Date.now(), targetHours: targetH };
+  const uid = currentUser?.uid || 'local';
+  await Db.setActiveFast(uid, _fastState);
+  startFastTickerIfNeeded();
+  refreshFastPageActiveCard();
+  refreshFastHomeCard();
+  toast(`Fast started · target ${targetH}h`);
+}
+
+async function breakFast() {
+  if (!_fastState) return;
+  const uid = currentUser?.uid || 'local';
+  const completed = {
+    startTs: _fastState.startTs,
+    endTs: Date.now(),
+    targetHours: _fastState.targetHours,
+    actualHours: +((Date.now() - _fastState.startTs) / 3600000).toFixed(2),
+  };
+  await Db.addCompletedFast(uid, completed);
+  await Db.setActiveFast(uid, null);
+  _fastState = null;
+  startFastTickerIfNeeded(); // clears interval
+  refreshFastPageActiveCard();
+  refreshFastHomeCard();
+  refreshFastHistoryList();
+  invalidateStreaksCache();
+  refreshHomeStreaks();
+  const reached = completed.actualHours >= completed.targetHours;
+  toast(reached ? `Fast complete · ${completed.actualHours}h logged ✓` : `Fast ended · ${completed.actualHours}h logged`);
+}
+
+async function refreshFastHistoryList() {
+  const list = document.getElementById('fast-history-list');
+  const count = document.getElementById('fast-history-count');
+  if (!list) return;
+  const uid = currentUser?.uid || 'local';
+  const items = await Db.getCompletedFasts(uid, 20);
+  if (count) count.textContent = items.length ? `${items.length} logged` : '';
+  if (!items.length) {
+    list.innerHTML = '<p class="empty-state">No completed fasts yet.</p>';
+    return;
+  }
+  list.innerHTML = items.map(f => {
+    const start = new Date(f.startTs);
+    const end = new Date(f.endTs);
+    const reached = f.actualHours >= f.targetHours;
+    const dateLbl = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const startTime = start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    const endTime = end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.85rem;color:var(--ink);font-weight:500;">${dateLbl} · ${f.actualHours}h${reached ? ' <span style="color:#34a853;font-size:.72rem;">✓</span>' : ''}</div>
+        <div style="font-size:.72rem;color:var(--text-muted);">${startTime} → ${endTime} · target ${f.targetHours}h</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ─── Home render ──────────────────────────────
 function renderHome() {
   if (!userProfile) return;
@@ -1556,6 +1999,22 @@ function renderHome() {
   setBar('c', totals.carbs,   t.carbs,   'g');
   setBar('f', totals.fat,     t.fat,     'g');
   renderHomeMeals();
+  refreshHomeStreaks();
+}
+
+// Async refresh of the two streak badges. Doesn't block renderHome.
+async function refreshHomeStreaks() {
+  const elDiet = document.getElementById('home-streak-diet-val');
+  const elFast = document.getElementById('home-streak-fast-val');
+  if (!elDiet || !elFast) return;
+  try {
+    const s = await getStreaks();
+    elDiet.textContent = `${s.diet.current} day${s.diet.current === 1 ? '' : 's'}${s.diet.todayTentative ? ' •' : ''}`;
+    elDiet.title = s.diet.todayTentative ? 'Today counts tentatively — stay within ±10% of goal to keep it' : '';
+    elFast.textContent = `${s.fast.current} day${s.fast.current === 1 ? '' : 's'}`;
+  } catch (e) {
+    console.warn('[NutriLog] streaks refresh failed:', e);
+  }
 }
 function setBar(m, val, target, unit) {
   const pct = Math.min(val/target*100,100);
@@ -1685,40 +2144,171 @@ function renderLogPage() {
   }).join('');
 }
 
-// ─── Add meal modal ───────────────────────────
+// ─── Log meal modal ───────────────────────────
+// Simplified flow: pick a saved/preset meal + serving multiplier. No ingredient picker.
+// If user can't find their meal, "Add one in Meals →" link routes to Meals page.
+let _logMultiplier = 1;                  // current serving multiplier in the log modal
+let _logEditOriginalQtys = null;         // when editing: snapshot of original item quantities for ×1 reconstruction
+
 function openAddMealModal() {
   _editingLogIdx = null;
-  amSelectedItems = [];
+  _logMultiplier = 1;
+  _logEditOriginalQtys = null;
   document.getElementById('am-meal-name').value = '';
-  document.getElementById('am-search').value = '';
-  // Reset modal title + button text in case we just came from edit mode
+  // Build the meal dropdown from PRESET_MEALS + savedMeals (global + private merged)
+  populateLogMealSelect();
+  // Reset multiplier UI
+  setLogMultiplier(1);
+  // Update modal title
   const modal = document.getElementById('modal-add-meal');
-  modal.querySelector('h3').textContent = 'Add a Meal';
+  modal.querySelector('h3').textContent = 'Log a Meal';
   const saveBtn = modal.querySelector('button.btn-primary.btn-full');
-  if (saveBtn) saveBtn.textContent = 'Save Meal';
-  renderFoodList('am-food-list', 'am');
-  renderSelected('am');
+  if (saveBtn) saveBtn.textContent = 'Log Meal';
+  // Refresh preview
+  refreshLogPreview();
   openModal('modal-add-meal');
 }
 
-// Open Add Meal modal in EDIT mode for an existing logged meal
+// Open the Log modal in EDIT mode for an existing logged meal.
+// We try to recover the original meal_id from meal.sourceMealId if present.
+// If unknown (legacy entries), fall back to "Custom" with editable multiplier=1.
 function editMealEntry(idx) {
   const meal = todayLog.meals?.[idx];
   if (!meal) return;
   _editingLogIdx = idx;
-  // Deep copy items so editing doesn't mutate the saved meal until user saves
-  amSelectedItems = meal.items.map(it => ({ foodId: it.foodId, qty: it.qty }));
+  _logEditOriginalQtys = meal.items.map(it => ({ foodId: it.foodId, qty: it.qty }));
   document.getElementById('am-meal-name').value = meal.name || '';
-  document.getElementById('am-search').value = '';
-  // Update modal UI to indicate edit mode
+  populateLogMealSelect(meal.sourceMealId || '');
+  // Try to infer the original multiplier from the stored items vs. the source meal's items.
+  // If the source meal isn't available, default to 1.
+  const inferredMult = inferMultiplierForLog(meal);
+  setLogMultiplier(inferredMult);
   const modal = document.getElementById('modal-add-meal');
-  modal.querySelector('h3').textContent = 'Edit Meal';
+  modal.querySelector('h3').textContent = 'Edit Logged Meal';
   const saveBtn = modal.querySelector('button.btn-primary.btn-full');
-  if (saveBtn) saveBtn.textContent = 'Update Meal';
-  renderFoodList('am-food-list', 'am');
-  renderSelected('am');
+  if (saveBtn) saveBtn.textContent = 'Update';
+  refreshLogPreview();
   openModal('modal-add-meal');
 }
+
+// Populate the meal dropdown with: presets first, then global (SHARED) meals, then private.
+function populateLogMealSelect(preselect = '') {
+  const sel = document.getElementById('am-meal-select');
+  if (!sel) return;
+  const presets = PRESET_MEALS.map(pm => ({ id: 'preset:' + pm.name, name: pm.name, items: pm.items, source: 'preset' }));
+  const globals = (savedMeals || []).filter(m => m.source === 'global');
+  const privates = (savedMeals || []).filter(m => m.source !== 'global');
+  const optGroup = (label, list, prefix) => {
+    if (!list.length) return '';
+    return `<optgroup label="${label}">` + list.map(m => {
+      const id = prefix ? prefix + ':' + m.id : m.id;
+      return `<option value="${escapeHtml(id)}">${escapeHtml(m.name)}</option>`;
+    }).join('') + '</optgroup>';
+  };
+  sel.innerHTML =
+    optGroup('Quick Combos', presets, '') +
+    optGroup('Shared Meals', globals, '') +
+    optGroup('My Meals', privates, '');
+  if (preselect && sel.querySelector(`option[value="${CSS.escape(preselect)}"]`)) {
+    sel.value = preselect;
+  }
+  sel.onchange = () => {
+    // Auto-fill the name field with the picked meal's name if name is blank
+    const nameEl = document.getElementById('am-meal-name');
+    const picked = getMealFromSelect();
+    if (picked && !nameEl.value.trim()) nameEl.value = picked.name;
+    refreshLogPreview();
+  };
+}
+
+// Resolve currently-selected dropdown value to a meal object {name, items}.
+function getMealFromSelect() {
+  const sel = document.getElementById('am-meal-select');
+  if (!sel || !sel.value) return null;
+  const v = sel.value;
+  if (v.startsWith('preset:')) {
+    const presetName = v.slice('preset:'.length);
+    return PRESET_MEALS.find(pm => pm.name === presetName) || null;
+  }
+  return (savedMeals || []).find(m => m.id === v) || null;
+}
+
+// Set the multiplier and reflect in chip styles + custom input.
+function setLogMultiplier(mult) {
+  _logMultiplier = Math.max(0.1, Number(mult) || 1);
+  // Highlight chip if matches one of the presets
+  document.querySelectorAll('.am-mult-chip').forEach(chip => {
+    const v = Number(chip.dataset.mult);
+    if (Math.abs(v - _logMultiplier) < 0.001) {
+      chip.classList.remove('btn-secondary'); chip.classList.add('btn-primary');
+    } else {
+      chip.classList.remove('btn-primary'); chip.classList.add('btn-secondary');
+    }
+  });
+  const customEl = document.getElementById('am-mult-custom');
+  if (customEl && Math.abs(Number(customEl.value) - _logMultiplier) > 0.001) {
+    customEl.value = _logMultiplier;
+  }
+  refreshLogPreview();
+}
+
+function onLogMultCustomInput(val) {
+  _logMultiplier = Math.max(0.1, Number(val) || 1);
+  // Reset chip highlights — custom value rarely matches a chip exactly
+  document.querySelectorAll('.am-mult-chip').forEach(chip => {
+    const v = Number(chip.dataset.mult);
+    if (Math.abs(v - _logMultiplier) < 0.001) {
+      chip.classList.remove('btn-secondary'); chip.classList.add('btn-primary');
+    } else {
+      chip.classList.remove('btn-primary'); chip.classList.add('btn-secondary');
+    }
+  });
+  refreshLogPreview();
+}
+
+function refreshLogPreview() {
+  const meal = getMealFromSelect();
+  const preview = document.getElementById('am-log-preview');
+  if (!meal || !meal.items || !meal.items.length) {
+    if (preview) preview.style.display = 'none';
+    return;
+  }
+  if (preview) preview.style.display = '';
+  // Scale items by multiplier for preview
+  const scaled = meal.items.map(it => ({ foodId: it.foodId, qty: (it.qty || 0) * _logMultiplier }));
+  const m = sumMacros(scaled);
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('am-prev-p', m.protein.toFixed(0));
+  set('am-prev-c', m.carbs.toFixed(0));
+  set('am-prev-f', m.fat.toFixed(0));
+  set('am-prev-k', Math.round(m.calories));
+  set('am-log-preview-total', `${Math.round(m.calories)} kcal · ×${_logMultiplier}`);
+}
+
+// Best-effort multiplier inference for edit mode: compare logged item qtys against the
+// source meal's items. If qty ratios are consistent, that's the multiplier; else default 1.
+function inferMultiplierForLog(loggedMeal) {
+  if (!loggedMeal.sourceMealId) return 1;
+  const src = (() => {
+    if (loggedMeal.sourceMealId.startsWith('preset:')) {
+      const n = loggedMeal.sourceMealId.slice('preset:'.length);
+      return PRESET_MEALS.find(pm => pm.name === n);
+    }
+    return (savedMeals || []).find(m => m.id === loggedMeal.sourceMealId);
+  })();
+  if (!src || !src.items || !src.items.length) return 1;
+  const ratios = [];
+  loggedMeal.items.forEach(li => {
+    const si = src.items.find(s => s.foodId === li.foodId);
+    if (si && si.qty > 0) ratios.push(li.qty / si.qty);
+  });
+  if (!ratios.length) return 1;
+  const avg = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+  // Sanity: ratios all close to each other
+  const allClose = ratios.every(r => Math.abs(r - avg) < 0.01);
+  return allClose ? Math.round(avg * 10) / 10 : 1;
+}
+
 function filterFoods(q) { renderFoodList('am-food-list', 'am', q); }
 function filterFoodsCM(q) { renderFoodList('cm-food-list', 'cm', q); }
 
@@ -1922,22 +2512,39 @@ function addWebFoodToSelection(webIdx, prefix) {
 })();
 
 async function saveMealEntry() {
-  const name = document.getElementById('am-meal-name').value.trim() || 'Meal';
-  if (!amSelectedItems.length) { toast('Add at least one ingredient'); return; }
+  const name = document.getElementById('am-meal-name').value.trim();
+  const meal = getMealFromSelect();
+  if (!meal) { toast('Pick a meal from the dropdown'); return; }
+  if (!meal.items || !meal.items.length) { toast('That meal has no ingredients'); return; }
+  const mult = _logMultiplier || 1;
+  // Scale items by multiplier — the logged copy is independent of the source meal
+  // so future edits to the source don't retroactively change historical logs.
+  const scaledItems = meal.items.map(it => ({ foodId: it.foodId, qty: +((it.qty || 0) * mult).toFixed(3) }));
+  const finalName = name || meal.name || 'Meal';
+  const sourceMealId = (() => {
+    const sel = document.getElementById('am-meal-select');
+    return sel ? sel.value : '';
+  })();
   const date = document.getElementById('log-date').value || todayStr();
   if (!todayLog.meals) todayLog.meals = [];
   if (_editingLogIdx !== null && todayLog.meals[_editingLogIdx]) {
-    // Update in place — preserve original time
     const orig = todayLog.meals[_editingLogIdx];
-    todayLog.meals[_editingLogIdx] = { name, items: [...amSelectedItems], time: orig.time || Date.now() };
+    todayLog.meals[_editingLogIdx] = {
+      name: finalName, items: scaledItems, time: orig.time || Date.now(),
+      sourceMealId, multiplier: mult,
+    };
   } else {
-    todayLog.meals.push({ name, items: [...amSelectedItems], time: Date.now() });
+    todayLog.meals.push({
+      name: finalName, items: scaledItems, time: Date.now(),
+      sourceMealId, multiplier: mult,
+    });
   }
   const wasEditing = _editingLogIdx !== null;
   _editingLogIdx = null;
   await Db.saveLog(currentUser?.uid || 'local', date, todayLog);
   if (date === homeDate) await loadHomeLog();
   closeModal('modal-add-meal');
+  invalidateStreaksCache();
   renderLogPage();
   renderHome();
   toast(wasEditing ? 'Meal updated ✓' : 'Meal logged ✓');
@@ -1948,6 +2555,7 @@ async function deleteMealEntry(idx) {
   const date = document.getElementById('log-date').value || todayStr();
   await Db.saveLog(currentUser?.uid || 'local', date, todayLog);
   if (date === homeDate) await loadHomeLog();
+  invalidateStreaksCache();
   renderLogPage();
   renderHome();
   toast('Removed');
@@ -1961,9 +2569,20 @@ function renderMeals() {
   }).join('');
   const sl = document.getElementById('saved-meals-list');
   if (!savedMeals.length) { sl.innerHTML = '<p class="empty-state">No saved meals yet.</p>'; return; }
+  // Global meals shown with a small badge. Delete button only shown if the user has permission:
+  //   - global meals: only admin can delete
+  //   - private meals: only the owner (which is the only one who sees them anyway)
   sl.innerHTML = savedMeals.map(sm=>{
     const m=sumMacros(sm.items);
-    return `<div class="meal-card mb-1"><div class="flex-between mb-1"><span style="font-weight:600">${sm.name}</span><div style="display:flex;gap:.4rem"><button class="btn btn-sm btn-secondary" onclick="logSavedMeal('${sm.id}')">Log</button><button class="btn btn-sm btn-ghost" onclick="deleteCustomMeal('${sm.id}')">🗑</button></div></div><div class="macro-row"><div class="macro-pill p"><span class="val" style="font-size:.85rem">${m.protein.toFixed(1)}</span><span class="lbl">P</span></div><div class="macro-pill c"><span class="val" style="font-size:.85rem">${m.carbs.toFixed(1)}</span><span class="lbl">C</span></div><div class="macro-pill f"><span class="val" style="font-size:.85rem">${m.fat.toFixed(1)}</span><span class="lbl">F</span></div><div class="macro-pill k"><span class="val" style="font-size:.85rem">${Math.round(m.calories)}</span><span class="lbl">kcal</span></div></div></div>`;
+    const isGlobal = sm.source === 'global';
+    const canDelete = isGlobal ? isAdmin() : true;
+    const badge = isGlobal
+      ? '<span style="font-size:.65rem;background:rgba(52,168,83,0.15);color:#34a853;padding:.1rem .35rem;border-radius:4px;margin-left:.4rem;letter-spacing:.02em;">SHARED</span>'
+      : '';
+    const delBtn = canDelete
+      ? `<button class="btn btn-sm btn-ghost" onclick="deleteCustomMeal('${sm.id}', ${isGlobal})">🗑</button>`
+      : '';
+    return `<div class="meal-card mb-1"><div class="flex-between mb-1"><span style="font-weight:600">${sm.name}${badge}</span><div style="display:flex;gap:.4rem"><button class="btn btn-sm btn-secondary" onclick="logSavedMeal('${sm.id}')">Log</button>${delBtn}</div></div><div class="macro-row"><div class="macro-pill p"><span class="val" style="font-size:.85rem">${m.protein.toFixed(1)}</span><span class="lbl">P</span></div><div class="macro-pill c"><span class="val" style="font-size:.85rem">${m.carbs.toFixed(1)}</span><span class="lbl">C</span></div><div class="macro-pill f"><span class="val" style="font-size:.85rem">${m.fat.toFixed(1)}</span><span class="lbl">F</span></div><div class="macro-pill k"><span class="val" style="font-size:.85rem">${Math.round(m.calories)}</span><span class="lbl">kcal</span></div></div></div>`;
   }).join('');
 }
 async function logPresetMeal(pm) {
@@ -2003,8 +2622,10 @@ async function saveCustomMeal() {
   closeModal('modal-create-meal');
   toast('Meal saved ✓');
 }
-async function deleteCustomMeal(id) {
-  await Db.deleteMeal(currentUser?.uid||'local', id);
+async function deleteCustomMeal(id, isGlobal = false) {
+  // Permission guard: only admin can delete global meals; everyone can delete their own.
+  if (isGlobal && !isAdmin()) { toast('Only admin can delete shared meals'); return; }
+  await Db.deleteMeal(currentUser?.uid||'local', id, isGlobal);
   savedMeals = savedMeals.filter(m=>m.id!==id);
   renderMeals();
   toast('Deleted');
@@ -2082,8 +2703,173 @@ async function loadRecentLogs(days = 7) {
   return out;
 }
 
+// ─── Streaks ──────────────────────────────────
+// Diet streak: consecutive days where calories logged are within ±10% of target.
+//   - "Today" is tentative: if you haven't gone over target yet, today counts.
+//     If you overshoot mid-day, the streak breaks at the next refresh.
+//   - A day with ZERO logged calories does NOT count (not logged = not a hit).
+// Fast streak: consecutive days with at least one completed fast ≥ 14 hours.
+//   - "Today" counts if either (a) an active fast has already crossed 14h, or
+//     (b) a completed fast today exists with actualHours ≥ 14.
+//
+// Both streaks also report `best` (longest streak ever) — computed by sliding through
+// the available history. Returns counts, plus a `todayTentative` flag for the diet
+// streak so the UI can show "(today tentative)" if needed.
+const DIET_TOL_FRACTION = 0.10;     // ±10%
+const FAST_MIN_HOURS = 14;
+
+function _ymd(d) {
+  if (typeof d === 'string') return d.slice(0, 10);
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+function _shiftDay(ymd, delta) {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + delta);
+  return _ymd(dt);
+}
+
+// Compute diet streak from a list of {date, calories} (any order). Uses userProfile.targets.calories.
+function computeDietStreak(days) {
+  const target = userProfile?.targets?.calories;
+  if (!target || !days?.length) return { current: 0, best: 0, todayTentative: false };
+  const lo = target * (1 - DIET_TOL_FRACTION);
+  const hi = target * (1 + DIET_TOL_FRACTION);
+  // Build a map of date → calories
+  const byDate = {};
+  days.forEach(d => { byDate[d.date] = d.calories || 0; });
+  const today = _ymd(new Date());
+  const isHit = (ds, isToday) => {
+    const cal = byDate[ds];
+    if (cal === undefined) return null;            // no log = unknown (counts as miss for past, skip-today)
+    if (cal === 0) return isToday ? null : false;  // zero on past day = miss; zero today = tentative-skip
+    return cal >= lo && cal <= hi;
+  };
+  // Current streak: walk backward from today
+  let current = 0;
+  let todayTentative = false;
+  // Today: if logged calories are within band, count tentatively; if zero or unknown, skip today
+  // and start streak count from yesterday. If overshoot (already over hi), today breaks streak.
+  {
+    const todayCal = byDate[today];
+    if (todayCal !== undefined && todayCal > 0) {
+      if (todayCal > hi) {
+        // Overshoot today — current streak is 0 (broken)
+        return { current: 0, best: computeBestStreakFromMap(byDate, lo, hi), todayTentative: false };
+      } else if (todayCal >= lo) {
+        current = 1;
+        todayTentative = true;
+      } else {
+        // Under-eating today (below lo). Treat as not-yet-hit; check yesterday onward.
+        todayTentative = false;
+      }
+    }
+  }
+  let cursor = _shiftDay(today, -1);
+  // Walk back as long as days are hits
+  const earliest = Object.keys(byDate).sort()[0];
+  while (cursor >= (earliest || cursor)) {
+    const h = isHit(cursor, false);
+    if (h === true) { current++; cursor = _shiftDay(cursor, -1); }
+    else break;
+  }
+  return { current, best: Math.max(current, computeBestStreakFromMap(byDate, lo, hi)), todayTentative };
+}
+
+function computeBestStreakFromMap(byDate, lo, hi) {
+  const dates = Object.keys(byDate).sort();
+  let best = 0, run = 0;
+  let prev = null;
+  for (const d of dates) {
+    const cal = byDate[d];
+    const hit = cal >= lo && cal <= hi;
+    if (!hit) { run = 0; prev = d; continue; }
+    if (prev && _shiftDay(prev, 1) === d) run++; else run = 1;
+    if (run > best) best = run;
+    prev = d;
+  }
+  return best;
+}
+
+// Compute fast streak from list of completed fasts and current active fast.
+function computeFastStreak(completedFasts, activeFast) {
+  // Build set of dates that "had a qualifying fast" — keyed by the day the fast ENDED.
+  const hitDates = new Set();
+  (completedFasts || []).forEach(f => {
+    if ((f.actualHours || 0) >= FAST_MIN_HOURS) {
+      hitDates.add(_ymd(new Date(f.endTs)));
+    }
+  });
+  // Active fast: if already past 14h, today counts
+  if (activeFast) {
+    const elapsedH = (Date.now() - activeFast.startTs) / 3600000;
+    if (elapsedH >= FAST_MIN_HOURS) hitDates.add(_ymd(new Date()));
+  }
+  const today = _ymd(new Date());
+  // Current: walk backward from today
+  let current = 0;
+  let cursor = today;
+  if (hitDates.has(cursor)) {
+    current = 1;
+    cursor = _shiftDay(cursor, -1);
+    while (hitDates.has(cursor)) { current++; cursor = _shiftDay(cursor, -1); }
+  } else {
+    // Today not yet a hit — start from yesterday
+    cursor = _shiftDay(today, -1);
+    while (hitDates.has(cursor)) { current++; cursor = _shiftDay(cursor, -1); }
+  }
+  // Best: scan all hit dates for longest consecutive run
+  const sorted = Array.from(hitDates).sort();
+  let best = 0, run = 0, prev = null;
+  for (const d of sorted) {
+    if (prev && _shiftDay(prev, 1) === d) run++; else run = 1;
+    if (run > best) best = run;
+    prev = d;
+  }
+  return { current, best };
+}
+
+// Top-level: load enough history and compute both streaks. Cached briefly to avoid
+// hitting Firestore on every renderHome — call invalidateStreaksCache() after any
+// action that could affect them (logging a meal, breaking a fast).
+let _streaksCache = null;
+let _streaksCacheAt = 0;
+const STREAKS_CACHE_TTL = 60_000; // 60s
+
+function invalidateStreaksCache() { _streaksCache = null; }
+
+async function getStreaks() {
+  if (_streaksCache && (Date.now() - _streaksCacheAt) < STREAKS_CACHE_TTL) return _streaksCache;
+  // Look back 60 days for diet (more than enough for typical streak lengths)
+  const days = await loadRecentLogs(60);
+  const completed = await Db.getCompletedFasts(currentUser?.uid || 'local', 100);
+  const diet = computeDietStreak(days);
+  const fast = computeFastStreak(completed, _fastState);
+  _streaksCache = { diet, fast };
+  _streaksCacheAt = Date.now();
+  return _streaksCache;
+}
+
 async function renderTrends() {
   if (typeof Chart === 'undefined') { console.warn('Chart.js not loaded'); return; }
+  // Streaks (cached internally, so safe to call here)
+  try {
+    const s = await getStreaks();
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('trends-streak-diet-curr', `${s.diet.current} day${s.diet.current === 1 ? '' : 's'}`);
+    set('trends-streak-diet-sub', s.diet.todayTentative ? 'current · today tentative' : 'current');
+    set('trends-streak-diet-best', `${s.diet.best} day${s.diet.best === 1 ? '' : 's'}`);
+    set('trends-streak-fast-curr', `${s.fast.current} day${s.fast.current === 1 ? '' : 's'}`);
+    set('trends-streak-fast-best', `${s.fast.best} day${s.fast.best === 1 ? '' : 's'}`);
+    const note = document.getElementById('trends-streak-note');
+    if (note) {
+      if (s.diet.current === 0 && s.fast.current === 0) note.textContent = 'Start a streak today';
+      else note.textContent = '';
+    }
+  } catch (e) {
+    console.warn('[NutriLog] trends streaks failed:', e);
+  }
   const days = await loadRecentLogs(7);
   const goal = userProfile?.targets?.calories || 2000;
 
@@ -2300,8 +3086,14 @@ function startVoiceLog() {
     toast('Voice input not supported in this browser. Try Chrome.');
     return;
   }
-  // Determine which modal triggered voice (am or cm)
-  _voicePrefix = document.getElementById('modal-create-meal').classList.contains('open') ? 'cm' : 'am';
+  // Voice is only available in the Meals create modal (where you build a custom meal).
+  // The Log page no longer has voice — it's a meal-picker only.
+  const cmOpen = document.getElementById('modal-create-meal').classList.contains('open');
+  if (!cmOpen) {
+    toast('Open a meal in the Meals page to use voice.');
+    return;
+  }
+  _voicePrefix = 'cm';
   _voiceFinalTranscript = '';
   _voiceLastProcessed = '';
   document.getElementById('voice-heard').innerHTML = '<span style="color:var(--muted);font-style:italic;">Waiting for speech…</span>';
@@ -2375,30 +3167,133 @@ function stopVoiceLog(commit) {
   }
   if (commit) {
     const text = (_voiceFinalTranscript || document.getElementById('voice-heard').textContent || '').trim();
-    if (text && text !== '…') processVoiceTranscript(text);
-    else toast('Nothing heard');
+    if (text && text !== '…') {
+      // Switch modal to review state — user confirms/edits before items are added
+      showVoiceReviewDraft(text);
+      return;
+    }
+    toast('Nothing heard');
   }
   closeModal('modal-voice');
 }
 
-function processVoiceTranscript(transcript) {
+// Draft state — voice modal turns into a review panel after Done is tapped.
+// User can fix qty or remove parsed items, then commit them to the meal being built.
+let _voiceDraftItems = [];   // [{ foodId, qty, name }]
+let _voiceDraftUnmatched = []; // [{ name }]
+
+function showVoiceReviewDraft(transcript) {
   const matches = parseVoiceInput(transcript);
-  const matched = matches.filter(m => m.foodId);
-  const unmatched = matches.filter(m => !m.foodId);
-  if (matched.length === 0) {
-    toast(unmatched.length ? `Couldn't match: ${unmatched.map(m=>m.name).join(', ')}` : 'No ingredients detected');
+  _voiceDraftItems = matches.filter(m => m.foodId).map(m => ({ foodId: m.foodId, qty: m.qty, name: m.name }));
+  _voiceDraftUnmatched = matches.filter(m => !m.foodId).map(m => ({ name: m.name }));
+  // Swap UI to review state
+  document.getElementById('voice-listen-state').style.display = 'none';
+  document.getElementById('voice-review-state').style.display = '';
+  document.getElementById('voice-title').textContent = 'Review parsed items';
+  renderVoiceDraftList();
+}
+
+function renderVoiceDraftList() {
+  const wrap = document.getElementById('voice-review-list');
+  if (!_voiceDraftItems.length) {
+    wrap.innerHTML = '<p class="text-muted" style="font-size:.85rem;padding:.8rem;background:var(--surface2);border-radius:8px;text-align:center;">No ingredients matched. Tap "Try again" to re-record.</p>';
+  } else {
+    wrap.innerHTML = _voiceDraftItems.map((it, idx) => {
+      const f = FOOD_DB.find(x => x.id === it.foodId);
+      if (!f) return '';
+      const m = macrosFor(it.foodId, it.qty);
+      return `<div class="selected-row">
+        <div class="sr-name">${escapeHtml(f.name)}<span class="sr-serving">${escapeHtml(f.serving)}</span></div>
+        <input type="number" class="sr-qty" value="${it.qty}" min="0.25" step="0.25" onchange="updateVoiceDraftQty(${idx},this.value)" onclick="event.stopPropagation()"/>
+        <span class="sr-cal">${Math.round(m.calories)} kcal</span>
+        <button class="btn btn-ghost btn-sm sr-del" onclick="removeVoiceDraftItem(${idx})">✕</button>
+      </div>`;
+    }).join('');
+  }
+  const um = document.getElementById('voice-review-unmatched');
+  if (_voiceDraftUnmatched.length) {
+    um.style.display = '';
+    um.innerHTML = `<strong>Not in your library:</strong> ${_voiceDraftUnmatched.map(u => escapeHtml(u.name)).join(', ')}. Add them as custom ingredients first if needed.`;
+  } else {
+    um.style.display = 'none';
+  }
+}
+
+function updateVoiceDraftQty(idx, val) {
+  if (!_voiceDraftItems[idx]) return;
+  _voiceDraftItems[idx].qty = Math.max(0.25, +val || 0.25);
+  renderVoiceDraftList();
+}
+
+function removeVoiceDraftItem(idx) {
+  _voiceDraftItems.splice(idx, 1);
+  renderVoiceDraftList();
+}
+
+function reopenVoiceListening() {
+  // Reset to listening state and restart recognition
+  _voiceDraftItems = [];
+  _voiceDraftUnmatched = [];
+  document.getElementById('voice-review-state').style.display = 'none';
+  document.getElementById('voice-listen-state').style.display = '';
+  document.getElementById('voice-title').textContent = 'Listening…';
+  document.getElementById('voice-heard').textContent = '';
+  document.getElementById('voice-status').textContent = '';
+  _voiceFinalTranscript = '';
+  // Restart listening (closeModal sets _voiceRec to null elsewhere)
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  _voiceRec = new SR();
+  _voiceRec.lang = 'en-IN';
+  _voiceRec.continuous = true;
+  _voiceRec.interimResults = true;
+  _voiceRec.maxAlternatives = 1;
+  _voiceRec.onresult = (event) => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) _voiceFinalTranscript += transcript + ' ';
+      else interim += transcript;
+    }
+    const display = (_voiceFinalTranscript + interim).trim();
+    document.getElementById('voice-heard').textContent = display || '…';
+    if (display) previewVoiceMatches(display);
+  };
+  _voiceRec.onend = () => {
+    if (document.getElementById('modal-voice').classList.contains('open') && _voiceRec) {
+      try { _voiceRec.start(); } catch(_) {}
+    }
+  };
+  try { _voiceRec.start(); } catch(_) {}
+}
+
+function commitVoiceDraft() {
+  if (!_voiceDraftItems.length) {
+    toast('Nothing to add. Try again or cancel.');
     return;
   }
   const list = _voicePrefix === 'cm' ? cmSelectedItems : amSelectedItems;
-  matched.forEach(m => {
+  _voiceDraftItems.forEach(m => {
     const ex = list.find(i => i.foodId === m.foodId);
     if (ex) ex.qty = +(ex.qty + m.qty).toFixed(2);
     else list.push({ foodId: m.foodId, qty: m.qty });
   });
   renderSelected(_voicePrefix);
-  let msg = `Added ${matched.length} item${matched.length > 1 ? 's' : ''}`;
-  if (unmatched.length) msg += ` · skipped: ${unmatched.map(m=>m.name).join(', ')}`;
-  toast(msg);
+  const n = _voiceDraftItems.length;
+  closeModal('modal-voice');
+  // Reset modal to listening state for next time
+  document.getElementById('voice-review-state').style.display = 'none';
+  document.getElementById('voice-listen-state').style.display = '';
+  document.getElementById('voice-title').textContent = 'Listening…';
+  _voiceDraftItems = [];
+  _voiceDraftUnmatched = [];
+  toast(`Added ${n} ingredient${n > 1 ? 's' : ''} ✓`);
+}
+
+function processVoiceTranscript(transcript) {
+  // Legacy entry — no longer wired since stopVoiceLog now shows the review draft directly.
+  // Kept for safety in case anything else calls it.
+  showVoiceReviewDraft(transcript);
 }
 
 // ─── Custom Ingredient ────────────────────────
