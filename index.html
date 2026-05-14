@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-05-14-7"/>
+<meta name="app-version" content="2026-05-14-8"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -262,9 +262,48 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
 #picker-sheet .sheet .picker-opt:hover { border-color: var(--accent); }
 #picker-sheet .sheet .picker-opt.selected { border-color: var(--accent); background: rgba(200,240,110,.08); }
 #picker-sheet .sheet .picker-opt .check { color: var(--accent); font-weight: 600; }
+
+/* ---- Auto-update banner ---- */
+#updateBanner {
+  position: fixed; left: 12px; right: 12px; top: calc(12px + env(safe-area-inset-top, 0));
+  background: linear-gradient(135deg, rgba(200,240,110,0.16), rgba(200,240,110,0.08));
+  border: 1px solid var(--accent); border-radius: 12px;
+  padding: 12px 14px; z-index: 970;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  display: none; align-items: center; gap: 10px;
+  max-width: 540px; margin: 0 auto;
+  opacity: 0; transform: translateY(-12px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+#updateBanner.show { display: flex; opacity: 1; transform: translateY(0); }
+#updateBanner .upd-text { flex: 1; min-width: 0; }
+#updateBanner .upd-title { font-size: .9rem; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
+#updateBanner .upd-sub { font-size: .72rem; color: var(--text-muted); line-height: 1.4; font-family: var(--mono, monospace); }
+#updateBanner .upd-actions { display: flex; gap: 6px; flex-shrink: 0; }
+#updateBanner button { padding: 7px 11px; border-radius: 7px; cursor: pointer; font-weight: 500; font-size: .75rem; letter-spacing: .04em; border: 1px solid transparent; white-space: nowrap; transition: all .15s; }
+#updateBanner .upd-dismiss { background: transparent; color: var(--text-muted); border-color: var(--border); }
+#updateBanner .upd-dismiss:active { color: var(--ink); border-color: var(--ink-dim); }
+#updateBanner .upd-refresh { background: var(--accent); color: #0f1117; font-weight: 600; border-color: var(--accent); }
+#updateBanner .upd-refresh:active { opacity: .85; }
+@media (max-width: 480px) {
+  #updateBanner { flex-wrap: wrap; }
+  #updateBanner .upd-actions { width: 100%; justify-content: flex-end; }
+}
 </style>
 </head>
 <body>
+
+<!-- Auto-update banner: shown when version.json reports a newer version. -->
+<div id="updateBanner" role="status" aria-live="polite">
+  <div class="upd-text">
+    <div class="upd-title">A new version is available</div>
+    <div class="upd-sub" id="updSub">Refresh to load the latest features.</div>
+  </div>
+  <div class="upd-actions">
+    <button class="upd-dismiss" id="updDismissBtn" aria-label="Dismiss">Later</button>
+    <button class="upd-refresh" id="updRefreshBtn">Refresh now</button>
+  </div>
+</div>
 
 <!-- AUTH PAGE -->
 <section class="page active" id="page-auth">
@@ -3878,6 +3917,90 @@ if ('serviceWorker' in navigator) {
     }
   });
 }
+
+// ---- Explicit auto-update banner ----
+// This is layered on top of the SW. Even if the SW caches kick in differently
+// (especially on iOS Safari), this gives the user a visible "Refresh now" CTA.
+// Reads the version from the <meta name="app-version"> tag, polls version.json
+// next to the page, and shows the banner when versions don't match.
+(function () {
+  const APP_VERSION = (document.querySelector('meta[name="app-version"]')?.content || '').trim();
+  if (!APP_VERSION) return;       // nothing to compare against
+  const AUTO_UPDATE_URL = 'version.json';
+  const AUTO_UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;   // 5 minutes
+  const banner = document.getElementById('updateBanner');
+  const subEl = document.getElementById('updSub');
+  const dismissBtn = document.getElementById('updDismissBtn');
+  const refreshBtn = document.getElementById('updRefreshBtn');
+  if (!banner || !refreshBtn || !dismissBtn) return;
+
+  const DISMISS_KEY = 'nutrilog_update_dismissed_for';
+  let latestRemoteVersion = null;
+
+  const showBanner = (remoteVer) => {
+    latestRemoteVersion = remoteVer;
+    // "Later" suppresses the banner for that specific version. New version re-shows it.
+    let dismissedFor = '';
+    try { dismissedFor = localStorage.getItem(DISMISS_KEY) || ''; } catch (e) {}
+    if (dismissedFor === remoteVer) return;
+    if (subEl) subEl.textContent = `Current: ${APP_VERSION} → New: ${remoteVer}. One tap to update.`;
+    banner.classList.add('show');
+  };
+  const hideBanner = () => banner.classList.remove('show');
+
+  const hardRefresh = async () => {
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = 'Refreshing…';
+    // Clear Caches API
+    try {
+      if (window.caches && caches.keys) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch (e) { /* ignore */ }
+    // Unregister all service workers so next load fetches fresh from network
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+    } catch (e) { /* ignore */ }
+    // Reload with cache-busting query string
+    const u = new URL(window.location.href);
+    u.searchParams.set('v', Date.now().toString());
+    window.location.replace(u.toString());
+  };
+
+  refreshBtn.addEventListener('click', hardRefresh);
+  dismissBtn.addEventListener('click', () => {
+    if (latestRemoteVersion) {
+      try { localStorage.setItem(DISMISS_KEY, latestRemoteVersion); } catch (e) {}
+    }
+    hideBanner();
+  });
+
+  const checkForUpdate = async () => {
+    try {
+      // Cache-busting query string + cache: 'no-store' = always fresh
+      const url = AUTO_UPDATE_URL + (AUTO_UPDATE_URL.includes('?') ? '&' : '?') + '_=' + Date.now();
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const remoteVer = (data && (data.version || data.v)) || null;
+      if (remoteVer && remoteVer !== APP_VERSION) showBanner(remoteVer);
+    } catch (e) {
+      // Silent — offline, or version.json not yet published
+    }
+  };
+
+  // Initial check after a brief delay, then periodic
+  setTimeout(checkForUpdate, 2000);
+  setInterval(checkForUpdate, AUTO_UPDATE_CHECK_INTERVAL_MS);
+  // Re-check whenever tab regains focus (catches the case where tab sat idle overnight)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
+})();
 </script>
 </body>
 </html>
