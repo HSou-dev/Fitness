@@ -656,7 +656,10 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
         <p id="fast-status-text" style="font-size:.95rem;color:var(--ink);margin:0 0 .2rem;">Fasting</p>
         <p id="fast-target-text" style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">Goal: 16h</p>
         <p id="fast-started-text" style="font-size:.72rem;color:var(--text-muted);margin:0 0 1rem;">Started —</p>
-        <button class="btn btn-primary" onclick="breakFast()" style="min-width:160px;">Break Fast</button>
+        <div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="breakFast()" style="min-width:140px;">Break Fast</button>
+          <button class="btn btn-secondary" onclick="cancelFast()" style="min-width:100px;" title="Discard this fast without logging it (for accidental starts)">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -1828,14 +1831,15 @@ async function loadFastState() {
 function startFastTickerIfNeeded() {
   if (_fastTickInterval) { clearInterval(_fastTickInterval); _fastTickInterval = null; }
   if (!_fastState) return;
-  // Tick every 30s — granular enough to feel live without burning battery
+  // 1-second ticker for a real stopwatch feel. DOM updates are cheap (a few text nodes
+  // and one stroke-dashoffset). The interval pauses naturally when the tab is in the
+  // background (browsers throttle setInterval) and resumes on visibilitychange below.
   _fastTickInterval = setInterval(() => {
     refreshFastHomeCard();
-    // If the Fast page is visible, also refresh its big donut
     if (document.getElementById('page-fast')?.classList.contains('active')) {
       refreshFastPageActiveCard();
     }
-  }, 30000);
+  }, 1000);
 }
 
 // Returns {elapsedMs, totalMs, pct, remainingMs, exceeded}
@@ -1846,6 +1850,17 @@ function _fastProgress() {
   const pct = Math.min(100, (elapsedMs / totalMs) * 100);
   const remainingMs = totalMs - elapsedMs;
   return { elapsedMs, totalMs, pct, remainingMs, exceeded: elapsedMs > totalMs };
+}
+
+// Format ms as a stopwatch-style string. Defaults to HH:MM:SS for the big timer.
+// _fmtHMS keeps the older "Xh YYm" output for compact spots (home card, status text).
+function _fmtStopwatch(ms) {
+  if (ms < 0) ms = 0;
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 function _fmtHMS(ms) {
@@ -1905,7 +1920,7 @@ function refreshFastPageActiveCard() {
       arc.style.strokeDashoffset = offset;
       arc.style.stroke = prog.exceeded ? '#34a853' : 'var(--accent)';
     }
-    document.getElementById('fast-elapsed').textContent = _fmtHMS(prog.elapsedMs);
+    document.getElementById('fast-elapsed').textContent = _fmtStopwatch(prog.elapsedMs);
     document.getElementById('fast-pct').textContent = `${Math.round(Math.min(prog.pct, 100))}%`;
     document.getElementById('fast-status-text').textContent = prog.exceeded ? 'Goal met! Still fasting…' : 'Fasting';
     document.getElementById('fast-target-text').textContent = `Goal: ${_fastState.targetHours}h`;
@@ -1951,6 +1966,26 @@ async function startFast() {
   refreshFastPageActiveCard();
   refreshFastHomeCard();
   toast(`Fast started · target ${targetH}h`);
+}
+
+// Cancel an in-progress fast WITHOUT logging it to history. Used for accidental starts.
+// Asks for confirmation since this is destructive.
+async function cancelFast() {
+  if (!_fastState) return;
+  const elapsedH = (Date.now() - _fastState.startTs) / 3600000;
+  const confirmMsg = elapsedH < 1
+    ? 'Cancel this fast? It won\'t be saved to history.'
+    : `You've been fasting for ${elapsedH.toFixed(1)}h. Cancel without saving? Tap "Break Fast" instead if you want to log it.`;
+  if (!window.confirm(confirmMsg)) return;
+  const uid = currentUser?.uid || 'local';
+  await Db.setActiveFast(uid, null);
+  _fastState = null;
+  startFastTickerIfNeeded(); // clears interval
+  refreshFastPageActiveCard();
+  refreshFastHomeCard();
+  invalidateStreaksCache();
+  refreshHomeStreaks();
+  toast('Fast cancelled');
 }
 
 async function breakFast() {
@@ -2657,11 +2692,20 @@ async function saveCustomMeal() {
   if (!cmSelectedItems.length) { toast('Add at least one food'); return; }
   const uid = currentUser?.uid||'local';
   const meal = { id: editingMealId || `m_${Date.now()}`, name, items:[...cmSelectedItems] };
-  await Db.saveMeal(uid, meal);
-  savedMeals = await Db.getMeals(uid);
-  renderMeals();
-  closeModal('modal-create-meal');
-  toast('Meal saved ✓');
+  try {
+    await Db.saveMeal(uid, meal);
+    savedMeals = await Db.getMeals(uid);
+    renderMeals();
+    closeModal('modal-create-meal');
+    toast('Meal saved ✓');
+  } catch (e) {
+    console.error('[NutriLog] saveCustomMeal failed:', e);
+    if (e && e.code === 'permission-denied') {
+      toast('Permission denied — check Firestore rules for globalMeals/');
+    } else {
+      toast('Save failed: ' + (e?.message || 'unknown error'));
+    }
+  }
 }
 async function deleteCustomMeal(id, isGlobal = false) {
   // Permission guard: only admin can delete global meals; everyone can delete their own.
