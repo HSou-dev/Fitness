@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1117"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="description" content="NutriLog – personal macro & diet tracker"/>
-<meta name="app-version" content="2026-05-14-11"/>
+<meta name="app-version" content="2026-05-14-12"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
@@ -684,7 +684,10 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
           <input type="number" id="fast-custom-h" min="1" max="72" step="0.5" placeholder="e.g. 17" style="width:80px;padding:.4rem .6rem;font-size:.85rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;text-align:center;" oninput="onFastCustomInput(this.value)"/>
           <span style="font-size:.78rem;color:var(--text-muted);">hours</span>
         </div>
-        <button class="btn btn-primary" onclick="startFast()" style="min-width:160px;">Start Fast</button>
+        <div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="startFast()" style="min-width:140px;">Start Now</button>
+          <button class="btn btn-secondary" onclick="openLogPastFastModal()" style="min-width:140px;">Log Past Fast</button>
+        </div>
       </div>
     </div>
 
@@ -1014,6 +1017,50 @@ label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform:
   </div>
 </div>
 <style>@keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: .7; } }</style>
+
+<!-- Log/Edit Past Fast modal -->
+<div class="modal-overlay" id="modal-log-fast">
+  <div class="modal-sheet">
+    <div class="flex-between mb-2"><h3 id="lf-title">Log Past Fast</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-log-fast')">✕</button></div>
+    <p class="text-muted mb-2" style="font-size:.82rem;">Enter the start and end times. Use the picker or type directly.</p>
+
+    <!-- Start datetime -->
+    <div class="field" style="margin-bottom:.8rem;">
+      <label>Start (when you began fasting)</label>
+      <input type="datetime-local" id="lf-start" style="width:100%;padding:.55rem .7rem;font-size:.92rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;"/>
+    </div>
+
+    <!-- End datetime -->
+    <div class="field" style="margin-bottom:.8rem;">
+      <label>End (when you broke the fast)</label>
+      <input type="datetime-local" id="lf-end" style="width:100%;padding:.55rem .7rem;font-size:.92rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;"/>
+    </div>
+
+    <!-- Target hours: used for the streak/goal-met check -->
+    <div class="field" style="margin-bottom:.8rem;">
+      <label>Goal (target hours)</label>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+        <button type="button" class="btn btn-sm btn-secondary lf-target-chip" data-h="12" onclick="setLfTarget(12)">12h</button>
+        <button type="button" class="btn btn-sm btn-secondary lf-target-chip" data-h="14" onclick="setLfTarget(14)">14h</button>
+        <button type="button" class="btn btn-sm btn-primary lf-target-chip" data-h="16" onclick="setLfTarget(16)">16h</button>
+        <button type="button" class="btn btn-sm btn-secondary lf-target-chip" data-h="18" onclick="setLfTarget(18)">18h</button>
+        <button type="button" class="btn btn-sm btn-secondary lf-target-chip" data-h="20" onclick="setLfTarget(20)">20h</button>
+        <button type="button" class="btn btn-sm btn-secondary lf-target-chip" data-h="24" onclick="setLfTarget(24)">24h</button>
+        <input type="number" id="lf-target-custom" min="1" max="72" step="0.5" placeholder="custom" style="width:80px;padding:.4rem .6rem;font-size:.85rem;background:var(--bg-elev);color:var(--ink);border:1px solid var(--border);border-radius:8px;text-align:center;" oninput="onLfCustomTarget(this.value)"/>
+      </div>
+    </div>
+
+    <!-- Live preview -->
+    <div id="lf-preview" style="background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:.7rem;margin-bottom:.9rem;display:none;font-size:.85rem;text-align:center;">
+      <div id="lf-preview-text" style="color:var(--ink);"></div>
+      <div id="lf-preview-status" style="margin-top:.3rem;font-size:.78rem;color:var(--text-muted);"></div>
+    </div>
+
+    <p id="lf-error" style="display:none;color:var(--danger);font-size:.78rem;margin-bottom:.6rem;text-align:center;"></p>
+
+    <button class="btn btn-primary btn-full" onclick="saveLoggedFast()">Save Fast</button>
+  </div>
+</div>
 
 <!-- Custom Ingredient Modal -->
 <div class="modal-overlay" id="modal-custom-ing">
@@ -2036,12 +2083,13 @@ async function refreshFastHistoryList() {
     const dateLbl = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     const startTime = start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     const endTime = end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);gap:.6rem;">
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);gap:.4rem;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:.85rem;color:var(--ink);font-weight:500;">${dateLbl} · ${f.actualHours}h${reached ? ' <span style="color:#34a853;font-size:.72rem;">✓</span>' : ''}</div>
         <div style="font-size:.72rem;color:var(--text-muted);">${startTime} → ${endTime} · target ${f.targetHours}h</div>
       </div>
-      <button class="btn btn-sm btn-ghost" style="padding:.3rem .55rem;font-size:.78rem;flex-shrink:0;" onclick="deleteFastHistoryEntry(${f.startTs})" title="Delete this entry">🗑</button>
+      <button class="btn btn-sm btn-ghost" style="padding:.3rem .5rem;font-size:.78rem;flex-shrink:0;" onclick="openEditFastModal(${f.startTs})" title="Edit times">✏️</button>
+      <button class="btn btn-sm btn-ghost" style="padding:.3rem .5rem;font-size:.78rem;flex-shrink:0;" onclick="deleteFastHistoryEntry(${f.startTs})" title="Delete this entry">🗑</button>
     </div>`;
   }).join('');
 }
@@ -2059,6 +2107,156 @@ async function deleteFastHistoryEntry(startTs) {
   } catch (e) {
     console.error('[NutriLog] deleteFastHistoryEntry failed:', e);
     toast('Delete failed: ' + (e?.message || 'unknown error'));
+  }
+}
+
+// ─── Log Past Fast / Edit Fast modal ──────────
+// Single modal handles two cases:
+//   1. Logging a fast that already finished (e.g., last night) but wasn't tracked live.
+//   2. Editing an existing entry in history (changing start, end, or target).
+// State: _lfEditingTs holds the original startTs of the entry being edited (or null for new).
+let _lfEditingTs = null;
+let _lfTargetH = 16;
+
+// Convert epoch ms to a datetime-local input value (YYYY-MM-DDTHH:MM in local time).
+function _epochToLocalInput(ts) {
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Convert local datetime-input value back to epoch ms.
+function _localInputToEpoch(val) {
+  if (!val) return NaN;
+  return new Date(val).getTime();
+}
+
+function openLogPastFastModal() {
+  _lfEditingTs = null;
+  _lfTargetH = 16;
+  document.getElementById('lf-title').textContent = 'Log Past Fast';
+  // Default: yesterday 7 PM → today 9 AM (a typical 14h fast window)
+  const now = new Date();
+  const endDefault = new Date(now);
+  endDefault.setHours(9, 0, 0, 0);
+  // If "today 9am" is in the future (it's still morning), step back one day
+  if (endDefault > now) endDefault.setDate(endDefault.getDate() - 1);
+  const startDefault = new Date(endDefault);
+  startDefault.setDate(startDefault.getDate() - 1);
+  startDefault.setHours(19, 0, 0, 0);
+  document.getElementById('lf-start').value = _epochToLocalInput(startDefault.getTime());
+  document.getElementById('lf-end').value = _epochToLocalInput(endDefault.getTime());
+  document.getElementById('lf-target-custom').value = '';
+  document.getElementById('lf-error').style.display = 'none';
+  reflectLfTargetChips();
+  attachLfPreviewListeners();
+  refreshLfPreview();
+  openModal('modal-log-fast');
+}
+
+async function openEditFastModal(startTs) {
+  // Find the fast entry
+  const uid = currentUser?.uid || 'local';
+  const items = await Db.getCompletedFasts(uid, 100);
+  const f = items.find(it => it.startTs === startTs);
+  if (!f) { toast('Fast not found'); return; }
+  _lfEditingTs = startTs;
+  _lfTargetH = f.targetHours || 16;
+  document.getElementById('lf-title').textContent = 'Edit Fast';
+  document.getElementById('lf-start').value = _epochToLocalInput(f.startTs);
+  document.getElementById('lf-end').value = _epochToLocalInput(f.endTs);
+  document.getElementById('lf-target-custom').value = '';
+  document.getElementById('lf-error').style.display = 'none';
+  reflectLfTargetChips();
+  attachLfPreviewListeners();
+  refreshLfPreview();
+  openModal('modal-log-fast');
+}
+
+function setLfTarget(h) {
+  _lfTargetH = h;
+  document.getElementById('lf-target-custom').value = '';
+  reflectLfTargetChips();
+  refreshLfPreview();
+}
+
+function onLfCustomTarget(val) {
+  const n = Number(val);
+  if (n > 0 && n <= 72) {
+    _lfTargetH = n;
+    // Clear chip highlights since custom rarely matches one exactly
+    document.querySelectorAll('.lf-target-chip').forEach(c => { c.classList.remove('btn-primary'); c.classList.add('btn-secondary'); });
+  }
+  refreshLfPreview();
+}
+
+function reflectLfTargetChips() {
+  document.querySelectorAll('.lf-target-chip').forEach(c => {
+    const v = Number(c.dataset.h);
+    if (Math.abs(v - _lfTargetH) < 0.001) { c.classList.remove('btn-secondary'); c.classList.add('btn-primary'); }
+    else { c.classList.remove('btn-primary'); c.classList.add('btn-secondary'); }
+  });
+}
+
+let _lfListenersAttached = false;
+function attachLfPreviewListeners() {
+  if (_lfListenersAttached) return;
+  ['lf-start', 'lf-end'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', refreshLfPreview);
+  });
+  _lfListenersAttached = true;
+}
+
+function refreshLfPreview() {
+  const preview = document.getElementById('lf-preview');
+  const textEl = document.getElementById('lf-preview-text');
+  const statusEl = document.getElementById('lf-preview-status');
+  const startTs = _localInputToEpoch(document.getElementById('lf-start').value);
+  const endTs = _localInputToEpoch(document.getElementById('lf-end').value);
+  if (!startTs || !endTs) { preview.style.display = 'none'; return; }
+  const durationH = (endTs - startTs) / 3600000;
+  if (durationH <= 0) {
+    preview.style.display = '';
+    textEl.textContent = 'End must be after start';
+    statusEl.textContent = '';
+    return;
+  }
+  preview.style.display = '';
+  textEl.textContent = `Duration: ${durationH.toFixed(2)}h`;
+  const reached = durationH >= _lfTargetH;
+  const streakOK = durationH >= 14; // FAST_MIN_HOURS — counts toward streak
+  statusEl.innerHTML = (reached ? '<span style="color:#34a853;">Goal met ✓</span>' : '<span>Goal not reached</span>')
+    + (streakOK ? ' · <span style="color:#34a853;">counts toward streak</span>' : ' · <span style="color:var(--text-muted);">below 14h streak threshold</span>');
+}
+
+async function saveLoggedFast() {
+  const startTs = _localInputToEpoch(document.getElementById('lf-start').value);
+  const endTs = _localInputToEpoch(document.getElementById('lf-end').value);
+  const errEl = document.getElementById('lf-error');
+  errEl.style.display = 'none';
+  if (!startTs || !endTs) { errEl.textContent = 'Enter both start and end times.'; errEl.style.display = ''; return; }
+  if (endTs <= startTs) { errEl.textContent = 'End must be after start.'; errEl.style.display = ''; return; }
+  if (endTs > Date.now() + 60000) { errEl.textContent = 'End time can\'t be in the future.'; errEl.style.display = ''; return; }
+  const actualHours = +((endTs - startTs) / 3600000).toFixed(2);
+  const targetHours = Math.max(0.5, _lfTargetH || 16);
+  const uid = currentUser?.uid || 'local';
+  const fast = { startTs, endTs, actualHours, targetHours };
+  try {
+    // If editing AND the startTs changed, we must delete the old doc (its id was the old startTs).
+    if (_lfEditingTs !== null && _lfEditingTs !== startTs) {
+      await Db.deleteCompletedFast(uid, _lfEditingTs);
+    }
+    await Db.addCompletedFast(uid, fast);
+    invalidateStreaksCache();
+    closeModal('modal-log-fast');
+    refreshFastHistoryList();
+    refreshHomeStreaks();
+    toast(_lfEditingTs !== null ? 'Fast updated ✓' : 'Fast logged ✓');
+  } catch (e) {
+    console.error('[NutriLog] saveLoggedFast failed:', e);
+    errEl.textContent = 'Save failed: ' + (e?.message || 'unknown error');
+    errEl.style.display = '';
   }
 }
 
